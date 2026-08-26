@@ -204,4 +204,4 @@ not a safety-rated stop.
 
 ## Licence
 
-Apache-2.0. Portfolio work.
+Apache-2.0.
