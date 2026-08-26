@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # This job is the integration test.
+  #
+  # motionkit, robot-contracts and safeedge are fetched from their published
+  # repositories, so a broken export, a renamed target or a header that only
+  # resolves in-tree fails here. That is the point: it consumes them the way a
+  # third party would, and nothing else in the column checks that from outside.
+  build:
+    name: build against the published dependencies
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y ninja-build g++-14
+
+      # protobuf comes in through robot-contracts and is the bulk of the build.
+      - name: Cache dependency builds
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: pickcell-deps-${{ runner.os }}-g++14-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j "$(nproc)"
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # The measurement, re-run on a different machine.
+  #
+  # Absolute timings on a shared CI runner are not trustworthy and this job does
+  # not assert on them. What it asserts is the *relationship*: the polled link's
+  # worst case must not exceed the poll interval by more than a small margin,
+  # because that bound is arithmetic rather than a property of the hardware. If
+  # that stops holding, either the measurement is broken or the link is.
+  reaction:
+    name: the reaction bound holds
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y ninja-build g++-14
+
+      - name: Cache dependency builds
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: pickcell-deps-${{ runner.os }}-g++14-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure and build
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j "$(nproc)" --target pickcell-reaction
+
+      - name: Measure
+        run: |
+          ./build/src/pickcell-reaction --trials 15 --poll-ms 50 | tee reaction.txt
+
+      - name: The polled worst case must not exceed the poll interval
+        run: |
+          # Extract the HTTP link's max, in microseconds, and compare against the
+          # 50 ms poll interval with 50% headroom for a loaded shared runner.
+          max_us="$(awk '/HTTP poll/ { print $(NF) }' reaction.txt)"
+          if [ -z "$max_us" ]; then
+            echo "could not find the HTTP link's max in the output" >&2
+            exit 1
+          fi
+          echo "HTTP link worst case: ${max_us} us against a 50000 us poll interval"
+          awk -v m="$max_us" 'BEGIN { exit (m > 75000) ? 1 : 0 }' || {
+            echo "worst case exceeded the poll interval by more than the headroom" >&2
+            exit 1
+          }
+
+      - name: Upload the run's measurement
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reaction-${{ github.run_id }}
+          path: reaction.txt
+          if-no-files-found: error
+
+  container:
+    name: image builds
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t pickcell:ci .
+      - name: The binaries are present and runnable
+        run: |
+          docker run --rm --entrypoint /usr/local/bin/pickcell-reaction \
+            pickcell:ci --trials 3 --poll-ms 25

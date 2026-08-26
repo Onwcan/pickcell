@@ -1,0 +1,73 @@
+# The cell, end to end.
+#
+#   docker compose -f deploy/docker-compose.yml up --build
+#
+# safeedge decides whether torque is permitted; pickcelld runs the pick-and-place
+# cycle and stops when told. Prometheus scrapes both, so the safety transition
+# and the cell's reaction to it appear on one timeline.
+#
+# The link between them is an HTTP readiness poll, which is how these things are
+# usually wired. `pickcell-reaction` measures what that costs -- see
+# evidence/reaction-vs-poll-interval.txt -- and the honest summary is that the
+# cell's stop time is set by PICKCELL_SAFETY_POLL_MS below, not by anything
+# safeedge does.
+
+services:
+  safety-runtime:
+    image: ghcr.io/onwcan/safeedge:latest
+    build:
+      context: https://github.com/Onwcan/safeedge.git
+    environment:
+      SAFEEDGE_METRICS_PORT: "9100"
+      SAFEEDGE_FREQUENCY_HZ: "1000"
+    ports:
+      - "9100:9100"
+    # Real-time scheduling needs either CAP_SYS_NICE or a non-zero rtprio
+    # ulimit; Docker's defaults provide neither. Without it the runtime still
+    # works and says so in its own metrics, which is the behaviour to want.
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      memlock: -1
+    # No healthcheck override here. The safeedge image defines its own, against
+    # the binary at the path that image actually uses -- an override written
+    # from memory pointed at /usr/local/bin/safeedged and marked a perfectly
+    # healthy runtime as failed. Re-declaring a probe the upstream image already
+    # ships is a way to be wrong about someone else's layout.
+
+  cell:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      safety-runtime:
+        condition: service_healthy
+    environment:
+      PICKCELL_SAFETY_HOST: safety-runtime
+      PICKCELL_SAFETY_PORT: "9100"
+      PICKCELL_SAFETY_PATH: /readyz
+      PICKCELL_SAFETY_POLL_MS: "100"
+      PICKCELL_METRICS_PORT: "9200"
+    ports:
+      - "9200:9200"
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - cell
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus

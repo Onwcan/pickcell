@@ -1,0 +1,36 @@
+Safety reaction time against poll interval
+==========================================
+
+Same cell, same source, same machine. Only the link changes.
+
+--- poll interval 10 ms ---
+shared-memory seqlock        n=20    min       4.8  p50     326.9  p99    1026.0  max    1069.3
+HTTP poll every 10 ms        n=20    min    1892.8  p50    6362.5  p99   10582.2  max   10708.7
+link is 19x the shared-memory link (6.4 ms against 0.327 ms).
+
+--- poll interval 25 ms ---
+shared-memory seqlock        n=20    min     110.5  p50     537.0  p99     919.9  max     951.5
+HTTP poll every 25 ms        n=20    min    2966.3  p50   15526.2  p99   25724.8  max   25790.3
+link is 29x the shared-memory link (15.5 ms against 0.537 ms).
+
+--- poll interval 50 ms ---
+shared-memory seqlock        n=20    min     102.7  p50     555.3  p99     967.8  max    1016.1
+HTTP poll every 50 ms        n=20    min    7085.4  p50   25485.5  p99   42857.5  max   43461.7
+link is 46x the shared-memory link (25.5 ms against 0.555 ms).
+
+--- poll interval 100 ms ---
+shared-memory seqlock        n=20    min      19.8  p50     441.9  p99     894.5  max    1046.4
+HTTP poll every 100 ms       n=20    min    2856.7  p50   64920.2  p99   88476.6  max   96058.7
+link is 147x the shared-memory link (64.9 ms against 0.442 ms).
+
+--- poll interval 200 ms ---
+shared-memory seqlock        n=20    min       1.4  p50     373.0  p99    1045.4  max    1091.7
+HTTP poll every 200 ms       n=20    min    2069.7  p50  121986.3  p99  180617.0  max  190983.5
+link is 327x the shared-memory link (122.0 ms against 0.373 ms).
+
+The shared-memory figure is the control: it does not move with the poll
+interval because it does not poll. What it is bounded by is the cell's own
+1 kHz control period, which the cell chooses.
+
+The polled figure tracks half the poll interval, as a uniformly-timed
+event within a fixed window must.

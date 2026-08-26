@@ -1,0 +1,68 @@
+Losing the safety runtime must stop the cell
+============================================
+
+Captured from the docker compose stack: safeedge on :9100, pickcelld on :9200,
+polling /readyz every 100 ms.
+
+
+BEFORE -- the cell kept moving on a permit nobody had reissued
+--------------------------------------------------------------
+
+  $ curl -s localhost:9200/metrics          # safety runtime UP
+  pickcell_cycles_completed 5
+  pickcell_held_by_safety 0
+
+  $ docker compose stop safety-runtime
+  $ sleep 6 && curl -s localhost:9200/metrics
+  pickcell_cycles_completed 7               <-- advanced by two
+  pickcell_held_by_safety 0                 <-- still not held
+  pickcell_safety_poll_failures 2
+
+The safety runtime was gone and every poll was failing, and the cell completed
+two more pick-and-place cycles. HttpPollSafetyLink::poll() re-stamped
+observed_monotonic_ns on every call, so a cached "torque permitted" looked
+freshly confirmed forever. Absence of information read as permission.
+
+
+AFTER -- a permit expires
+-------------------------
+
+  $ curl -s localhost:9200/metrics          # safety runtime UP
+  pickcell_cycles_completed 2
+  pickcell_held_by_safety 0
+  pickcell_cycles_on_stale_safety 0
+
+  $ docker compose stop safety-runtime
+  $ sleep 8 && curl -s localhost:9200/metrics
+  pickcell_cycles_completed 2               <-- frozen
+  pickcell_held_by_safety 1
+  pickcell_cycles_on_stale_safety 7656
+  pickcell_safety_poll_failures 3
+
+  $ sleep 6 && curl -s localhost:9200/metrics
+  pickcell_cycles_completed 2               <-- still frozen
+  pickcell_held_by_safety 1
+
+
+THE FIX
+
+  * The link reports when its information was OBTAINED, not when it was asked
+    for, so a cached value visibly ages.
+  * The cell holds once that age exceeds Cell::Config::max_safety_age_ns
+    (250 ms by default, against a 100 ms poll).
+  * cycles_on_stale_safety is counted separately from cycles_without_safety:
+    "never heard from the runtime" and "heard, but too long ago to believe" are
+    different faults with different causes.
+
+  CellSafety.StopsBelievingAPermitThatHasGoneStale is the regression test.
+
+
+WHAT IS STILL NOT FIXED
+
+  SharedMemorySafetyLink has the same exposure and this does not close it. If
+  the writer dies, the seqlock keeps its last value indefinitely and the reader
+  cannot tell a live writer from a dead one -- the read succeeds either way.
+
+  Closing it needs the writer to heartbeat, which is exactly what the sequence
+  number in safeedge's safety telegram is for. Recorded here rather than
+  quietly left out.

@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 1s
+  evaluation_interval: 1s
+
+# One second, not the usual fifteen. A safety transition and the cell's reaction
+# to it are tens of milliseconds apart; a fifteen-second scrape would put both
+# in the same sample and show nothing.
+#
+# This is still far too coarse to *measure* the reaction -- that is what
+# pickcell-reaction is for. It is fine for showing that the transition happened
+# and that the cell followed.
+scrape_configs:
+  - job_name: safety-runtime
+    static_configs:
+      - targets: ["safety-runtime:9100"]
+
+  - job_name: cell
+    static_configs:
+      - targets: ["cell:9200"]

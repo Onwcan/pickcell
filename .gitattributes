@@ -1,0 +1,2 @@
+# LF everywhere: a CRLF makes a shell script shebang unparseable.
+* text=auto eol=lf
