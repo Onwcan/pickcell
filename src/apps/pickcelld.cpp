@@ -63,17 +63,26 @@ int main() {
   const std::string safety_host = environmentString("PICKCELL_SAFETY_HOST", "127.0.0.1");
   const auto safety_port =
       static_cast<std::uint16_t>(environmentLong("PICKCELL_SAFETY_PORT", 9100));
-  const std::string safety_path = environmentString("PICKCELL_SAFETY_PATH", "/readyz");
+  const std::string safety_path = environmentString("PICKCELL_SAFETY_PATH", "/safety");
+
+  // Which format the endpoint speaks. `stamped` carries the decision instant and
+  // makes the reaction time measurable; `readiness` is the 200/503 probe, kept
+  // because plenty of runtimes offer nothing else and the cell must still work
+  // against them -- it simply cannot report how long it took.
+  const std::string safety_format = environmentString("PICKCELL_SAFETY_FORMAT", "stamped");
+  const auto format = safety_format == "readiness"
+                          ? HttpPollSafetyLink::Format::kReadinessProbe
+                          : HttpPollSafetyLink::Format::kStamped;
   const auto poll_ms = environmentLong("PICKCELL_SAFETY_POLL_MS", 100);
   const auto metrics_port =
       static_cast<std::uint16_t>(environmentLong("PICKCELL_METRICS_PORT", 9200));
 
   logEvent("info", "polling " + safety_host + ":" + std::to_string(safety_port) +
-                       safety_path + " every " + std::to_string(poll_ms) + " ms");
+                       safety_path + " every " + std::to_string(poll_ms) + " ms (" +
+                       safety_format + ")");
 
   HttpPollSafetyLink safety(safety_host, safety_port, safety_path,
-                            std::chrono::milliseconds(poll_ms),
-                            HttpPollSafetyLink::Format::kReadinessProbe);
+                            std::chrono::milliseconds(poll_ms), format);
 
   Cell::Config config;
   config.period_ns = static_cast<std::uint64_t>(environmentLong("PICKCELL_PERIOD_US", 1000)) * 1000;
@@ -125,6 +134,14 @@ int main() {
     body += "# TYPE pickcell_cycles_on_stale_safety counter\n";
     body += "pickcell_cycles_on_stale_safety " +
             std::to_string(cell.cycles_on_stale_safety()) + "\n";
+
+    // Measurable only because the endpoint carries the decision instant. Against
+    // a plain readiness probe this stays 0 — which does not mean the cell is
+    // infinitely fast, it means nothing was measured.
+    body += "# HELP pickcell_last_stop_reaction_seconds Decision to cell stop.\n";
+    body += "# TYPE pickcell_last_stop_reaction_seconds gauge\n";
+    body += "pickcell_last_stop_reaction_seconds " +
+            std::to_string(static_cast<double>(cell.last_stop_reaction_ns()) / 1e9) + "\n";
 
     body += "# HELP pickcell_safety_poll_failures Failed safety polls.\n";
     body += "# TYPE pickcell_safety_poll_failures counter\n";

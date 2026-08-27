@@ -20,6 +20,14 @@ services:
     environment:
       SAFEEDGE_METRICS_PORT: "9100"
       SAFEEDGE_FREQUENCY_HZ: "1000"
+      # Trip the cell with:   docker compose exec safety-runtime touch /tmp/estop
+      # Clear it with:        docker compose exec safety-runtime rm /tmp/estop
+      # Then acknowledge:     docker compose exec safety-runtime touch /tmp/ack
+      #
+      # Clearing alone does not restart anything -- IEC 60204-1 requires that
+      # restoring an emergency stop device must not by itself restart a machine.
+      SAFEEDGE_ESTOP_FILE: /tmp/estop
+      SAFEEDGE_ACK_FILE: /tmp/ack
     ports:
       - "9100:9100"
     # Real-time scheduling needs either CAP_SYS_NICE or a non-zero rtprio
@@ -46,7 +54,14 @@ services:
     environment:
       PICKCELL_SAFETY_HOST: safety-runtime
       PICKCELL_SAFETY_PORT: "9100"
-      PICKCELL_SAFETY_PATH: /readyz
+      # /safety, not /readyz. The readiness probe answers "should traffic come
+      # here" and carries no instant, so a cell polling it cannot measure how
+      # long it took to stop. /safety carries the transition timestamp and a
+      # sequence number, which is what makes the reaction time a number rather
+      # than an impression. safeedge grew this endpoint because this integration
+      # showed it was missing.
+      PICKCELL_SAFETY_PATH: /safety
+      PICKCELL_SAFETY_FORMAT: stamped
       PICKCELL_SAFETY_POLL_MS: "100"
       PICKCELL_METRICS_PORT: "9200"
     ports:

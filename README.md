@@ -80,6 +80,34 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -
 
 ---
 
+## The column, measured end to end
+
+The synthetic benchmark above predicts a bound. Here is the real thing: two
+processes, safeedge deciding and the cell reacting, with safeedge stamping the
+instant it entered the safe state.
+
+From [`evidence/end-to-end-stop-time.txt`](evidence/end-to-end-stop-time.txt),
+ten trips at a 100 ms poll interval:
+
+```
+min 5.7 ms   median 48.7 ms   max 80.7 ms   (n=10)
+```
+
+Median at roughly half the poll interval, maximum inside it — the uniform
+distribution the synthetic measurement predicted, confirmed on the actual
+system. Trip it yourself:
+
+```bash
+docker compose -f deploy/docker-compose.yml exec safety-runtime touch /tmp/estop
+```
+
+**This number did not exist before.** safeedge grew its `/safety` endpoint
+because this integration showed that `/readyz` could not support the
+measurement, which is the useful thing an integration repository does: it asks a
+question that makes a gap in someone else's interface visible.
+
+---
+
 ## The gap this exposed
 
 safeedge's `/readyz` returns 200 or 503 and nothing else. No timestamp for the
@@ -89,7 +117,13 @@ That makes the end-to-end reaction time **unmeasurable** across it. A reader can
 only stamp its own observation, so any interval it computes comes out near zero —
 which does not mean the link is fast, it means there is nothing to measure.
 `HttpPollSafetyLink::Format::kReadinessProbe` implements exactly that and says so
-at the definition.
+at the definition — kept, because plenty of runtimes offer nothing else and the
+cell must still work against them. It simply cannot report how long it took.
+
+safeedge now offers `/safety` as well, carrying the transition instant and a
+sequence number, and the compose stack uses it. The readiness path remains
+selectable with `PICKCELL_SAFETY_FORMAT=readiness`, which is the honest way to
+show what the difference buys.
 
 This is why `robot-contracts` puts `monotonic_ns` on `StampedPose` and
 `since_monotonic_ns` on `SafetyState`. **A signal that cannot be timed cannot be

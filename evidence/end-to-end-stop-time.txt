@@ -1,0 +1,24 @@
+End-to-end safety stop: safeedge decision -> pickcell stops commanding
+======================================================================
+
+Two processes. safeedge stamps the instant it entered the safe state on
+/safety; the cell subtracts that from its own observation. Poll interval
+100 ms, cell control period 1 ms, 10 trips.
+
+       5.7 ms
+      22.6 ms
+      48.7 ms
+      77.0 ms
+      55.3 ms
+      80.7 ms
+      46.1 ms
+      75.5 ms
+      42.4 ms
+      68.4 ms
+
+  min 5.7 ms   median 48.7 ms   max 80.7 ms   (n=10)
+
+The bound is the poll interval, as scripts/measure-reaction.sh predicts.
+Nothing here is a property of the safety runtime: safeedge decides in
+about a millisecond and the cell reacts within one control period of
+learning. The interval is the link.
