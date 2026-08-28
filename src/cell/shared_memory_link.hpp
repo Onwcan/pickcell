@@ -35,7 +35,17 @@ class SharedMemorySafetyLink final : public SafetyLink {
   const std::string& error() const noexcept { return error_; }
 
   /// Writer side. Only the process that created the region should call this.
+  ///
+  /// Stamps `published_monotonic_ns` itself; the caller must not.
   void publish(const SafetySignal& signal);
+
+  /// Writer side. Republishes the current verdict with a fresh stamp.
+  ///
+  /// Must be called on a period shorter than the reader's staleness budget, even
+  /// when nothing has changed. A verdict that stops being restated is
+  /// indistinguishable, to any reader, from a writer that stopped existing --
+  /// and the reader is obliged to assume the worse of the two.
+  void heartbeat();
 
  private:
   explicit SharedMemorySafetyLink(safeedge::ipc::SharedMemoryRegion region,

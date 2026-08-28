@@ -54,9 +54,33 @@ SharedMemorySafetyLink::Slot* SharedMemorySafetyLink::slot() noexcept {
 }
 
 void SharedMemorySafetyLink::publish(const SafetySignal& signal) {
-  if (auto* s = slot(); s != nullptr) {
-    s->store(signal);
+  auto* s = slot();
+  if (s == nullptr) {
+    return;
   }
+  // The heartbeat is stamped here rather than trusted from the caller. A caller
+  // who forgot would leave the field frozen at whatever it was, which reads as a
+  // writer that died at that instant -- or, worse, if it were never set at all,
+  // as one that died at the epoch. Neither failure would be noticed until the
+  // day the writer actually did die.
+  SafetySignal stamped = signal;
+  stamped.published_monotonic_ns = nowNanos();
+  s->store(stamped);
+}
+
+void SharedMemorySafetyLink::heartbeat() {
+  auto* s = slot();
+  if (s == nullptr) {
+    return;
+  }
+  // Republish the current verdict unchanged, with a fresh stamp. This is what a
+  // writer does when nothing has happened -- and it is the only way a reader can
+  // tell "nothing has happened" from "nobody is there".
+  SafetySignal current;
+  if (!s->tryLoad(current)) {
+    return;
+  }
+  publish(current);
 }
 
 SafetyView SharedMemorySafetyLink::poll() {
@@ -76,7 +100,15 @@ SafetyView SharedMemorySafetyLink::poll() {
   view.valid = true;
   view.torque_permitted = signal.torque_permitted != 0;
   view.asserted_monotonic_ns = signal.asserted_monotonic_ns;
+
+  // When this reader found out -- used for the reaction time.
   view.observed_monotonic_ns = nowNanos();
+
+  // When the writer was last demonstrably alive -- used for staleness. A seqlock
+  // read succeeds whether the writer is alive or dead, since the slot keeps its
+  // last value indefinitely, so this is the only field that can tell the
+  // difference. It stops advancing the moment the heartbeat does.
+  view.published_monotonic_ns = signal.published_monotonic_ns;
   view.sequence = signal.sequence;
   last_good_ = view;
   return view;

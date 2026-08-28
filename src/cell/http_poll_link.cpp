@@ -227,7 +227,14 @@ SafetyView HttpPollSafetyLink::poll() {
   // then left the cell running on a permit nobody had reissued -- absence of
   // information reading as permission, which is the failure direction that must
   // never happen. Reporting the true age lets the caller notice.
-  view.observed_monotonic_ns = last_success_ns_.load(std::memory_order_acquire);
+  // For this link the two coincide: the server answering is simultaneously the
+  // moment the reader learned the value and the proof that the server was
+  // there. Both are the last successful fetch, and neither is nowNanos() --
+  // stamping the call would make a cached value look freshly confirmed forever,
+  // which is the defect that let the cell keep running after safeedge died.
+  const std::uint64_t obtained = last_success_ns_.load(std::memory_order_acquire);
+  view.observed_monotonic_ns = obtained;
+  view.published_monotonic_ns = obtained;
   view.sequence = signal.sequence;
   last_good_ = view;
   return view;

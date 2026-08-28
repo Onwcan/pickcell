@@ -218,13 +218,32 @@ pickcell_cycles_on_stale_safety 7656
 [`evidence/stale-permit-defect.txt`](evidence/stale-permit-defect.txt) has both
 runs.
 
-Two things this is worth noting for. A unit test would not have found it —
-every unit test passed both before and after, because the bug only exists when a
-real dependency stops answering. And **`SharedMemorySafetyLink` still has the
-same exposure**: if the writer dies the seqlock keeps its last value and the
-read succeeds regardless. Closing that needs a writer heartbeat, which is what
-the sequence number in safeedge's safety telegram is for. Recorded rather than
-quietly left out.
+A unit test would not have found it — every unit test passed both before and
+after, because the bug only exists when a real dependency stops answering.
+
+### And the same gap on the other link, now closed
+
+`SharedMemorySafetyLink` had the identical exposure for a different reason: a
+seqlock read succeeds whether the writer is alive or dead, because the region
+outlives the process that wrote it. The writer now stamps every publish and
+`heartbeat()` restates an unchanged verdict, so the reader can tell a standing
+decision from an abandoned one.
+
+`DeadWriter.TheCellStopsWhenTheWritingProcessExits` forks a real writer, lets it
+heartbeat, and kills it — a thread pretending to be dead is not the same
+experiment, since it leaves an intact process holding the mapping. The test
+asserts the uncomfortable middle state out loud: **after the writer is gone the
+read still succeeds and still says torque is permitted**, and only then that the
+cell stops believing it.
+
+Getting there cost one wrong turn worth recording. Reporting the writer's stamp
+as the reader's observation seemed right — both answer "how fresh is this" — and
+it collapsed the shared-memory reaction time to **0.1 µs**, because that writer
+stamps its publish at the instant it decides. A number that looks like a triumph
+and means the measurement is broken. They are two questions: *when did I find
+out* (reaction) and *when was the writer last demonstrably alive* (staleness).
+They coincide over HTTP and diverge over shared memory, which is exactly why the
+heartbeat is needed at all.
 
 ---
 

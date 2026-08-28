@@ -61,7 +61,29 @@ class SafetySource {
       return response;
     });
     started_ = server_.start(port);
+
+    // The writer must keep saying so. Without this the reader sees the publish
+    // stamp stop advancing and correctly concludes the source is gone -- the
+    // cell would hold, and the benchmark would measure nothing.
+    heartbeat_ = std::thread([this] {
+      while (heartbeat_running_.load(std::memory_order_relaxed)) {
+        shm_.heartbeat();
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      }
+    });
   }
+
+  ~SafetySource() {
+    heartbeat_running_.store(false, std::memory_order_relaxed);
+    if (heartbeat_.joinable()) {
+      heartbeat_.join();
+    }
+  }
+
+  SafetySource(const SafetySource&) = delete;
+  SafetySource& operator=(const SafetySource&) = delete;
+  SafetySource(SafetySource&&) = delete;
+  SafetySource& operator=(SafetySource&&) = delete;
 
   bool started() const { return started_ && shm_.valid(); }
   const std::string& error() const { return shm_.error(); }
@@ -104,6 +126,8 @@ class SafetySource {
   std::atomic<std::uint64_t> http_asserted_{0};
   std::atomic<std::uint32_t> http_permitted_{1};
   bool started_ = false;
+  std::atomic<bool> heartbeat_running_{true};
+  std::thread heartbeat_;
 };
 
 struct Summary {

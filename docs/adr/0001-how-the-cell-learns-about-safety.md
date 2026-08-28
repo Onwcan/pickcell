@@ -130,11 +130,48 @@ before the fix and after it, because the defect only exists when a real
 dependency stops answering. It took bringing the actual stack up and then
 breaking part of it on purpose.
 
-**The shared-memory link still has this exposure.** If the writer dies, the
-seqlock retains its last value and the reader cannot distinguish a live writer
-from a dead one — the read succeeds either way. Closing it needs the writer to
-heartbeat, which is what the sequence number in safeedge's safety telegram
-provides. Not done here, and recorded rather than omitted.
+## Closing the same gap on the shared-memory link
+
+The section above ended by recording that `SharedMemorySafetyLink` still had
+this exposure: a seqlock read succeeds whether the writer is alive or dead, so
+the reader could not tell a standing verdict from an abandoned one. Now closed.
+
+The writer stamps `published_monotonic_ns` on **every** publish, changed or not,
+and `heartbeat()` restates the current verdict on a period shorter than the
+reader's staleness budget. The reader reports that stamp, so the existing
+`max_safety_age_ns` check covers both links with no extra logic — the age simply
+stops advancing when the heartbeat does.
+
+`DeadWriter.TheCellStopsWhenTheWritingProcessExits` forks a real writer process,
+lets it heartbeat, and kills it. A thread pretending to be a dead writer would
+not be the same experiment: a thread that stops publishing leaves an intact
+process holding the mapping, while a process that exits leaves the region behind
+with nothing on the other end. The test asserts the uncomfortable middle state
+explicitly — after the writer is gone, the read still succeeds and still says
+torque is permitted — and then that the cell stops believing it.
+
+### The mistake worth recording
+
+The first attempt reported the writer's publish stamp as the reader's
+observation time, on the reasoning that both answer "how fresh is this". They do
+not. The shared-memory writer stamps its publish at the same instant it decides,
+so the reaction time — observation minus decision — collapsed to **0.1
+microseconds**. A number that looks like a triumph and means the measurement is
+broken.
+
+Two questions, two fields:
+
+| field | question | shm | HTTP |
+|---|---|---|---|
+| `observed_monotonic_ns` | when did *I* find out? | the read | the fetch |
+| `published_monotonic_ns` | when was the writer last demonstrably alive? | the writer's stamp | the fetch |
+
+They coincide for the HTTP link, because the server answering is simultaneously
+the reader learning and the proof of life. They diverge for shared memory, and
+that divergence is the whole reason the heartbeat is needed.
+
+Verified by injecting the regression: restoring the collapsed version makes
+`DeadWriter` fail. A test that cannot fail proves nothing.
 
 ## Consequences
 

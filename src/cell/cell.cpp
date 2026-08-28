@@ -183,8 +183,11 @@ void Cell::step(std::uint64_t now_ns) {
   // A permit expires. The link reports when its information was obtained; if
   // that was too long ago, the cell has no current statement about safety and
   // must behave as though it had none at all.
-  const bool stale = now_ns > safety.observed_monotonic_ns &&
-                     (now_ns - safety.observed_monotonic_ns) > config_.max_safety_age_ns;
+  // Against published_monotonic_ns, not observed: the question is how long ago
+  // the writer was last known to be alive, which for a shared-memory link is not
+  // the same as how long ago this reader looked.
+  const bool stale = now_ns > safety.published_monotonic_ns &&
+                     (now_ns - safety.published_monotonic_ns) > config_.max_safety_age_ns;
   if (stale) {
     ++cycles_on_stale_safety_;
     if (phase_ != CellPhase::kHeldBySafety) {
