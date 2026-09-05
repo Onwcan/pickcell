@@ -17,6 +17,16 @@ directories.** That is a test in itself: it consumes them exactly the way a thir
 party would, so a broken export or a target name that only exists in-tree fails
 here rather than in someone else's build.
 
+That includes the warning bar. This repository compiles under `-Werror` with
+`-Wconversion`, `-Wsign-conversion`, `-Wold-style-cast` and `-Wpedantic` by
+linking `motionkit::warnings` — the interface target motionkit exports — rather
+than restating the flags. An integration layer held to a lower standard than the
+libraries it integrates is where a narrowing conversion reaches a safety verdict
+unnoticed. Getting there needed one build fix and no code changes: FetchContent
+hands a dependency's headers over as ordinary include directories, so those flags
+fired inside protobuf and abseil until `CMakeLists.txt` re-marked them as system
+includes.
+
 ---
 
 ## The question
@@ -105,6 +115,52 @@ docker compose -f deploy/docker-compose.yml exec safety-runtime touch /tmp/estop
 because this integration showed that `/readyz` could not support the
 measurement, which is the useful thing an integration repository does: it asks a
 question that makes a gap in someone else's interface visible.
+
+---
+
+## Milliseconds are not what a cell is laid out in
+
+A reaction time is half a stopping distance. The other half is that the arm does
+not stop when it is told to — it decelerates under whatever acceleration and
+jerk it has, and that takes longer than the link did. `pickcell-safety-distance`
+adds motionkit's jerk-limited stop to the measured reaction and reports the
+number a guard is actually positioned from.
+
+Worst-case reactions, axis limits 2 m/s / 8 m/s² / 40 m/s³, from
+[`evidence/safety-distance.txt`](evidence/safety-distance.txt):
+
+| speed | link | reaction | braking | **total** |
+|---:|---|---:|---:|---:|
+| 0.25 m/s | shared memory | 0.3 mm | 19.8 mm | **20.0 mm** |
+| 0.25 m/s | HTTP poll 200 ms | 47.8 mm | 19.8 mm | **67.5 mm** |
+| 2.00 m/s | shared memory | 2.2 mm | 450.0 mm | **452.2 mm** |
+| 2.00 m/s | HTTP poll 200 ms | 382.0 mm | 450.0 mm | **832.0 mm** |
+
+Inverted — given the clearance a cell has, how fast may it run? With **200 mm**:
+shared memory permits **1.16 m/s**, a 200 ms poll permits **0.63 m/s**. The link
+choice nearly halves the cell's speed. That is cycle time, not a diagnostic
+curiosity.
+
+**And the penalty runs the other way to the instinct.** Swapping shared memory
+for a 200 ms poll multiplies the guard distance by **3.4×** at 0.25 m/s and by
+only **1.8×** at 2.00 m/s. The absolute cost is worse on a fast cell — 380 mm
+against 47 mm — while the *relative* cost is worse on a slow one, because
+braking distance grows faster than linearly with speed and reaction travel does
+not. A slow machine has almost no braking distance to hide a slow link behind.
+"We run slowly here, so latency does not matter" has it backwards.
+
+**The braking term is a floor this repository cannot lower.** No link, however
+fast, gets below 450 mm at 2 m/s. That is the honest limit on what the
+measurement above can buy, and worth stating plainly because the millisecond
+figures on their own invite the opposite conclusion. What the measurement
+decides is how much is added on top.
+
+```bash
+scripts/report-safety-distance.sh build
+```
+
+Reasoning in
+[ADR-0002](docs/adr/0002-reaction-time-is-half-a-stopping-distance.md).
 
 ---
 
@@ -252,6 +308,10 @@ heartbeat is needed at all.
 [`docs/adr/0001`](docs/adr/0001-how-the-cell-learns-about-safety.md) — the full
 argument, the trade in both directions, and why a software link however fast is
 not a safety-rated stop.
+
+[`docs/adr/0002`](docs/adr/0002-reaction-time-is-half-a-stopping-distance.md) —
+turning the measured reaction into a guard distance, what the calculation
+assumes, and the part of the stopping distance no link can improve.
 
 ---
 

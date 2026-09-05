@@ -61,6 +61,51 @@ set(SAFEEDGE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(motionkit robot_contracts safeedge)
 
+# --- third-party headers are not this repository's code ----------------------
+#
+# The libraries here are held to -Werror with -Wconversion, -Wsign-conversion
+# and -Wpedantic, and this repository should not hold itself to less: an
+# integration layer with warnings switched off is where a narrowing conversion
+# reaches a safety verdict unnoticed.
+#
+# The obstacle is that FetchContent hands a dependency's headers over as
+# ordinary include directories, so those flags fire inside protobuf and abseil
+# -- hundreds of diagnostics about __int128 and abseil's own sign conversions,
+# none of them about anything written here. CMake 3.25 added SYSTEM to
+# FetchContent_Declare for exactly this; the minimum here is 3.24, and raising
+# it to silence a warning is the wrong way round.
+#
+# So the include directories are re-marked afterwards. Recursive, because
+# protobuf brings abseil as a nested subdirectory and marking only the top level
+# leaves most of the headers behind.
+function(pickcell_mark_includes_system directory)
+  get_property(targets DIRECTORY "${directory}" PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(target IN LISTS targets)
+    get_target_property(type ${target} TYPE)
+    if(type STREQUAL "INTERFACE_LIBRARY" OR type STREQUAL "UTILITY")
+      # An INTERFACE library still carries include directories worth moving; a
+      # UTILITY target carries none and querying it is an error.
+      if(type STREQUAL "UTILITY")
+        continue()
+      endif()
+    endif()
+    get_target_property(dirs ${target} INTERFACE_INCLUDE_DIRECTORIES)
+    if(dirs)
+      set_target_properties(${target} PROPERTIES
+        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${dirs}")
+    endif()
+  endforeach()
+
+  get_property(children DIRECTORY "${directory}" PROPERTY SUBDIRECTORIES)
+  foreach(child IN LISTS children)
+    pickcell_mark_includes_system("${child}")
+  endforeach()
+endfunction()
+
+if(protobuf_SOURCE_DIR)
+  pickcell_mark_includes_system("${protobuf_SOURCE_DIR}")
+endif()
+
 add_subdirectory(src)
 
 if(PICKCELL_BUILD_TESTS)

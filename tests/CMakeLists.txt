@@ -13,6 +13,10 @@ include(GoogleTest)
 # The dead-writer test forks, so it lives in its own binary: a forked GoogleTest
 # process that shares the parent's test registry produces confusing output when
 # anything goes wrong.
-add_executable(pickcell_tests test_cell.cpp test_dead_writer.cpp)
-target_link_libraries(pickcell_tests PRIVATE pickcell::cell GTest::gtest_main)
+add_executable(pickcell_tests
+  test_cell.cpp
+  test_dead_writer.cpp
+  test_safety_distance.cpp)
+target_link_libraries(pickcell_tests
+  PRIVATE pickcell::cell GTest::gtest_main motionkit::warnings)
 gtest_discover_tests(pickcell_tests PROPERTIES LABELS integration DISCOVERY_TIMEOUT 30)

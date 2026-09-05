@@ -1,0 +1,83 @@
+How far the tool travels after the safety runtime decides
+=========================================================
+
+Axis limits: 2.0 m/s, 8 m/s^2, 40 m/s^3.
+
+Reaction travel is the distance covered before the cell has reacted --
+linear in speed and in the reaction time. Braking is what the arm covers
+decelerating under those limits, which motionkit computes and which grows
+faster than linearly. A guard is positioned from the sum.
+
+At 0.25 m/s
+  link                   reaction      braking        total
+                               mm           mm           mm
+  shared memory               0.3         19.8         20.0
+  HTTP poll 10 ms             2.7         19.8         22.4
+  HTTP poll 100 ms           24.0         19.8         43.8
+  HTTP poll 200 ms           47.8         19.8         67.5
+  braking alone takes 158 ms and is the same for every link
+
+At 0.50 m/s
+  link                   reaction      braking        total
+                               mm           mm           mm
+  shared memory               0.6         55.9         56.5
+  HTTP poll 10 ms             5.3         55.9         61.3
+  HTTP poll 100 ms           48.1         55.9        104.0
+  HTTP poll 200 ms           95.5         55.9        151.4
+  braking alone takes 224 ms and is the same for every link
+
+At 1.00 m/s
+  link                   reaction      braking        total
+                               mm           mm           mm
+  shared memory               1.1        158.1        159.2
+  HTTP poll 10 ms            10.7        158.1        168.8
+  HTTP poll 100 ms           96.1        158.1        254.2
+  HTTP poll 200 ms          191.0        158.1        349.1
+  braking alone takes 316 ms and is the same for every link
+
+At 2.00 m/s
+  link                   reaction      braking        total
+                               mm           mm           mm
+  shared memory               2.2        450.0        452.2
+  HTTP poll 10 ms            21.4        450.0        471.4
+  HTTP poll 100 ms          192.2        450.0        642.2
+  HTTP poll 200 ms          382.0        450.0        832.0
+  braking alone takes 450 ms and is the same for every link
+
+The same question from the other side
+-------------------------------------
+Given the clearance a cell actually has, how fast may it run?
+
+  clearance             shared memory  HTTP poll 10 ms HTTP poll 100 ms HTTP poll 200 ms
+                                  m/s              m/s              m/s              m/s
+               50 mm             0.46             0.43             0.28             0.19
+              100 mm             0.73             0.70             0.48             0.35
+              200 mm             1.16             1.12             0.83             0.63
+              500 mm             2.00             2.00             1.67             1.34
+             1000 mm             2.00             2.00             2.00             2.00
+The penalty runs the other way to the instinct
+---------------------------------------------
+Swapping shared memory for a 200 ms poll multiplies the guard distance
+by 3.4x at 0.25 m/s and by only 1.8x at 2.00 m/s.
+
+The absolute cost is worse on a fast cell -- 380 mm against 47 mm -- and
+the relative cost is worse on a slow one, because braking distance grows
+faster than linearly with speed while reaction travel does not. A slow
+machine has almost no braking distance to hide a slow link behind. "We
+run slowly here, so latency does not matter" has it backwards.
+
+
+What this says
+--------------
+The poll interval is not only a latency. It is floor space, and it is
+cycle time. Every millisecond of reaction costs the tool's speed in
+millimetres of clearance, and a cell that cannot have the clearance pays
+for it by running slower instead.
+
+The braking term is the floor. No link, however fast, gets below it --
+which is the honest limit on what this repository's measurement can buy.
+What the measurement decides is how much is added on top.
+
+Reaction figures are worst cases, from evidence/reaction-vs-poll-interval.txt.
+A guard is positioned for the slowest reaction the system can have, and
+for a poll that is not a measurement at all: it is the poll interval.
