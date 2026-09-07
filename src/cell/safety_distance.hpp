@@ -58,8 +58,7 @@ motionkit::Expected<StoppingDistance, motionkit::TrajectoryError> stoppingDistan
 /// `SafetyDistance.BisectionAgreesWithTheClosedFormWhereOneExists` checks the
 /// two against each other there rather than trusting either alone.
 motionkit::Expected<double, motionkit::TrajectoryError> permittedSpeed(
-    double available_m, std::uint64_t reaction_ns,
-    const motionkit::MotionLimits& limits);
+    double available_m, std::uint64_t reaction_ns, const motionkit::MotionLimits& limits);
 
 /// Axis limits used for the cell's reports, so the numbers in the evidence and
 /// the numbers in the tests come from one place.

@@ -13,8 +13,9 @@
 #include <cstdint>
 #include <limits>
 
-#include "cell/safety_distance.hpp"
 #include "motionkit/core/trajectory.hpp"
+
+#include "cell/safety_distance.hpp"
 
 namespace pickcell {
 namespace {
@@ -27,8 +28,7 @@ constexpr std::uint64_t kMillisecond = 1'000'000;
 StoppingDistance mustCompute(double speed, std::uint64_t reaction_ns,
                              const MotionLimits& limits = kCellAxisLimits) {
   const auto distance = stoppingDistance(speed, reaction_ns, limits);
-  EXPECT_EQ(distance.error, TrajectoryError::None)
-      << motionkit::toString(distance.error);
+  EXPECT_EQ(distance.error, TrajectoryError::None) << motionkit::toString(distance.error);
   return distance.value;
 }
 
@@ -62,11 +62,10 @@ TEST(SafetyDistance, TheLinkCannotChangeHowTheArmDecelerates) {
   EXPECT_LT(shared.total_m, polled.total_m);
 }
 
-
 TEST(SafetyDistance, TheTotalIsTheSumAndTheBrakingTimeIsReported) {
   const StoppingDistance distance = mustCompute(2.0, 50 * kMillisecond);
-  EXPECT_NEAR(distance.total_m,
-              distance.reaction_travel_m + distance.braking_distance_m, 1e-15);
+  EXPECT_NEAR(distance.total_m, distance.reaction_travel_m + distance.braking_distance_m,
+              1e-15);
   // Braking time is not reaction time, and conflating them is how a stopping
   // distance ends up short. At 2 m/s under these limits the arm spends longer
   // decelerating than a 100 ms poll spends noticing.
@@ -78,8 +77,8 @@ TEST(SafetyDistance, TheTotalIsTheSumAndTheBrakingTimeIsReported) {
 // ---------------------------------------------------------------------------
 
 TEST(SafetyDistance, PermittedSpeedRoundTripsThroughTheForwardCalculation) {
-  for (const std::uint64_t reaction : {std::uint64_t{0}, kMillisecond,
-                                       100 * kMillisecond}) {
+  for (const std::uint64_t reaction :
+       {std::uint64_t{0}, kMillisecond, 100 * kMillisecond}) {
     for (const double clearance : {0.02, 0.1, 0.3, 0.8}) {
       const auto speed = permittedSpeed(clearance, reaction, kCellAxisLimits);
       ASSERT_TRUE(speed.hasValue()) << motionkit::toString(speed.error);
@@ -120,7 +119,6 @@ TEST(SafetyDistance, BisectionAgreesWithTheClosedFormWhereOneExists) {
   }
 }
 
-
 TEST(SafetyDistance, NoRoomPermitsNoSpeed) {
   // The theme this cell is built around: the absence of clearance is not
   // permission to move. Zero is an answer, not an error.
@@ -141,9 +139,8 @@ TEST(SafetyDistance, AmpleRoomIsCappedByTheAxisAndNotByThePhysics) {
 
 TEST(SafetyDistance, MoreReactionTimeNeverPermitsMoreSpeed) {
   double previous = std::numeric_limits<double>::infinity();
-  for (const std::uint64_t reaction :
-       {std::uint64_t{0}, kMillisecond, 10 * kMillisecond, 100 * kMillisecond,
-        200 * kMillisecond}) {
+  for (const std::uint64_t reaction : {std::uint64_t{0}, kMillisecond, 10 * kMillisecond,
+                                       100 * kMillisecond, 200 * kMillisecond}) {
     const auto speed = permittedSpeed(0.3, reaction, kCellAxisLimits);
     ASSERT_TRUE(speed.hasValue());
     EXPECT_LE(speed.value, previous) << "a slower link permitted more speed";

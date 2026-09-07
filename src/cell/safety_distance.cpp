@@ -24,13 +24,13 @@ double secondsOf(std::uint64_t nanoseconds) noexcept {
 
 }  // namespace
 
-Expected<StoppingDistance, TrajectoryError> stoppingDistance(
-    double speed_mps, std::uint64_t reaction_ns, const MotionLimits& limits) {
+Expected<StoppingDistance, TrajectoryError> stoppingDistance(double speed_mps,
+                                                             std::uint64_t reaction_ns,
+                                                             const MotionLimits& limits) {
   if (!std::isfinite(speed_mps) || speed_mps < 0.0) {
     return {StoppingDistance{}, TrajectoryError::NonFiniteInput};
   }
-  if (const TrajectoryError error = limits.validate();
-      error != TrajectoryError::None) {
+  if (const TrajectoryError error = limits.validate(); error != TrajectoryError::None) {
     return {StoppingDistance{}, error};
   }
 
@@ -58,8 +58,7 @@ Expected<double, TrajectoryError> permittedSpeed(double available_m,
   if (!std::isfinite(available_m)) {
     return {0.0, TrajectoryError::NonFiniteInput};
   }
-  if (const TrajectoryError error = limits.validate();
-      error != TrajectoryError::None) {
+  if (const TrajectoryError error = limits.validate(); error != TrajectoryError::None) {
     return {0.0, error};
   }
   if (available_m <= 0.0) {
@@ -70,8 +69,7 @@ Expected<double, TrajectoryError> permittedSpeed(double available_m,
 
   const auto totalAt = [&](double speed) -> double {
     const auto distance = stoppingDistance(speed, reaction_ns, limits);
-    return distance ? distance.value.total_m
-                    : std::numeric_limits<double>::infinity();
+    return distance ? distance.value.total_m : std::numeric_limits<double>::infinity();
   };
 
   // If the axis cannot exceed its own ceiling and that already fits, the room

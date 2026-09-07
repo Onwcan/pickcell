@@ -5,10 +5,11 @@
 #include <string>
 #include <vector>
 
-#include "cell/safety_link.hpp"
 #include "motionkit/core/frame_graph.hpp"
 #include "motionkit/core/se3.hpp"
 #include "robot/v1/motion.pb.h"
+
+#include "cell/safety_link.hpp"
 
 namespace pickcell {
 
@@ -91,7 +92,9 @@ class Cell {
   bool has_stop_measurement() const noexcept { return has_stop_measurement_; }
 
   /// Cycles held because the newest safety information was too old to act on.
-  std::uint64_t cycles_on_stale_safety() const noexcept { return cycles_on_stale_safety_; }
+  std::uint64_t cycles_on_stale_safety() const noexcept {
+    return cycles_on_stale_safety_;
+  }
 
   /// Cycles in which the safety link reported nothing usable. A cell that has
   /// never heard from the safety runtime must not move, so these are cycles in

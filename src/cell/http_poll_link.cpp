@@ -2,8 +2,8 @@
 #include "cell/http_poll_link.hpp"
 
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -58,8 +58,8 @@ bool parseBody(const char* body, SafetySignal& out) {
 }  // namespace
 
 HttpPollSafetyLink::HttpPollSafetyLink(std::string host, std::uint16_t port,
-                                       std::string path,
-                                       std::chrono::milliseconds period, Format format)
+                                       std::string path, std::chrono::milliseconds period,
+                                       Format format)
     : host_(std::move(host)),
       port_(port),
       path_(std::move(path)),
@@ -116,8 +116,7 @@ bool HttpPollSafetyLink::fetchOnce(SafetySignal& out) {
         resolved == nullptr) {
       return false;
     }
-    address.sin_addr =
-        reinterpret_cast<sockaddr_in*>(resolved->ai_addr)->sin_addr;
+    address.sin_addr = reinterpret_cast<sockaddr_in*>(resolved->ai_addr)->sin_addr;
     ::freeaddrinfo(resolved);
   }
 
@@ -125,8 +124,8 @@ bool HttpPollSafetyLink::fetchOnce(SafetySignal& out) {
     return false;
   }
 
-  const std::string request = "GET " + path_ + " HTTP/1.1\r\nHost: " + host_ +
-                              "\r\nConnection: close\r\n\r\n";
+  const std::string request =
+      "GET " + path_ + " HTTP/1.1\r\nHost: " + host_ + "\r\nConnection: close\r\n\r\n";
   if (::write(fd, request.data(), request.size()) !=
       static_cast<ssize_t>(request.size())) {
     return false;

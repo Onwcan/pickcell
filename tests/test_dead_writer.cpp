@@ -112,7 +112,8 @@ TEST(DeadWriter, TheCellStopsWhenTheWritingProcessExits) {
   const Observation dead = observe(reader, std::chrono::milliseconds(200));
   EXPECT_TRUE(dead.held_for_staleness)
       << "the cell kept running against a writer that no longer exists";
-  EXPECT_FALSE(dead.moved_at_all) << "the cell must not move at all once the permit expired";
+  EXPECT_FALSE(dead.moved_at_all)
+      << "the cell must not move at all once the permit expired";
 
   safeedge::ipc::SharedMemoryRegion::unlinkName(kRegion);
 }

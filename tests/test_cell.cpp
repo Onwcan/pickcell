@@ -106,7 +106,8 @@ TEST(CellSafety, HoldsWhenTheWriterStopsHeartbeatingEvenThoughReadsSucceed) {
 
   // Time passes. The reader is still reading successfully and still observing
   // "now" on every call -- but nobody has restated the verdict.
-  for (std::uint64_t elapsed = 50'000'000; elapsed <= 240'000'000; elapsed += 50'000'000) {
+  for (std::uint64_t elapsed = 50'000'000; elapsed <= 240'000'000;
+       elapsed += 50'000'000) {
     link.view.observed_monotonic_ns = 1'000'000 + elapsed;
     cell.step(1'000'000 + elapsed);
   }

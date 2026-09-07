@@ -17,9 +17,10 @@
 #include <string>
 #include <thread>
 
+#include "safeedge/edge/http_server.hpp"
+
 #include "cell/cell.hpp"
 #include "cell/http_poll_link.hpp"
-#include "safeedge/edge/http_server.hpp"
 
 namespace {
 
@@ -69,7 +70,8 @@ int main() {
   // makes the reaction time measurable; `readiness` is the 200/503 probe, kept
   // because plenty of runtimes offer nothing else and the cell must still work
   // against them -- it simply cannot report how long it took.
-  const std::string safety_format = environmentString("PICKCELL_SAFETY_FORMAT", "stamped");
+  const std::string safety_format =
+      environmentString("PICKCELL_SAFETY_FORMAT", "stamped");
   const auto format = safety_format == "readiness"
                           ? HttpPollSafetyLink::Format::kReadinessProbe
                           : HttpPollSafetyLink::Format::kStamped;
@@ -85,7 +87,8 @@ int main() {
                             std::chrono::milliseconds(poll_ms), format);
 
   Cell::Config config;
-  config.period_ns = static_cast<std::uint64_t>(environmentLong("PICKCELL_PERIOD_US", 1000)) * 1000;
+  config.period_ns =
+      static_cast<std::uint64_t>(environmentLong("PICKCELL_PERIOD_US", 1000)) * 1000;
   Cell cell(safety, config);
 
   std::atomic<bool> running{true};
@@ -121,7 +124,8 @@ int main() {
     // Exported because a cell that has never heard from the safety runtime is
     // not the same as one that has been told it may not move, and a dashboard
     // that cannot tell them apart will read a dead link as a safe machine.
-    body += "# HELP pickcell_cycles_without_safety Cycles with no usable safety verdict.\n";
+    body +=
+        "# HELP pickcell_cycles_without_safety Cycles with no usable safety verdict.\n";
     body += "# TYPE pickcell_cycles_without_safety counter\n";
     body += "pickcell_cycles_without_safety " +
             std::to_string(cell.cycles_without_safety()) + "\n";
@@ -130,7 +134,9 @@ int main() {
     // runtime" and "heard from it, but too long ago to still believe it" are
     // different faults with different causes, and a single counter would hide
     // which one is happening.
-    body += "# HELP pickcell_cycles_on_stale_safety Cycles held because the permit expired.\n";
+    body +=
+        "# HELP pickcell_cycles_on_stale_safety Cycles held because the permit "
+        "expired.\n";
     body += "# TYPE pickcell_cycles_on_stale_safety counter\n";
     body += "pickcell_cycles_on_stale_safety " +
             std::to_string(cell.cycles_on_stale_safety()) + "\n";
@@ -141,15 +147,18 @@ int main() {
     body += "# HELP pickcell_last_stop_reaction_seconds Decision to cell stop.\n";
     body += "# TYPE pickcell_last_stop_reaction_seconds gauge\n";
     body += "pickcell_last_stop_reaction_seconds " +
-            std::to_string(static_cast<double>(cell.last_stop_reaction_ns()) / 1e9) + "\n";
+            std::to_string(static_cast<double>(cell.last_stop_reaction_ns()) / 1e9) +
+            "\n";
 
     body += "# HELP pickcell_safety_poll_failures Failed safety polls.\n";
     body += "# TYPE pickcell_safety_poll_failures counter\n";
-    body += "pickcell_safety_poll_failures " + std::to_string(safety.requests_failed()) + "\n";
+    body += "pickcell_safety_poll_failures " + std::to_string(safety.requests_failed()) +
+            "\n";
 
     body += "# HELP pickcell_safety_poll_total Attempted safety polls.\n";
     body += "# TYPE pickcell_safety_poll_total counter\n";
-    body += "pickcell_safety_poll_total " + std::to_string(safety.requests_attempted()) + "\n";
+    body += "pickcell_safety_poll_total " + std::to_string(safety.requests_attempted()) +
+            "\n";
     response.body = body;
     return response;
   });

@@ -27,6 +27,21 @@ hands a dependency's headers over as ordinary include directories, so those flag
 fired inside protobuf and abseil until `CMakeLists.txt` re-marked them as system
 includes.
 
+Formatting is enforced the same way, by the same script the other repositories
+use, pinned to clang-format 18 — a different major version formats differently
+and CI would then reject a correctly formatted tree. Run it before pushing:
+
+```bash
+scripts/format.sh          # reformat in place
+scripts/format.sh --check  # report violations, change nothing
+```
+
+The `.clang-format` here is not quite a copy of the others. It differs in one
+place, and the difference is the point of this repository: `motionkit`,
+`safeedge` and `robot` are *third-party* headers from here and sort before the
+cell's own, whereas in those repositories they are the project. This is the one
+repo that consumes all three rather than being one of them.
+
 ---
 
 ## The question

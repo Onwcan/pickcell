@@ -22,7 +22,8 @@ constexpr motionkit::Scalar kPi = std::numbers::pi_v<motionkit::Scalar>;
 /// space depending on which convention was picked.
 SE3 interpolate(const SE3& from, const SE3& to, double t) {
   const double clamped = std::clamp(t, 0.0, 1.0);
-  const Vec3 position = from.translation() + (to.translation() - from.translation()) * clamped;
+  const Vec3 position =
+      from.translation() + (to.translation() - from.translation()) * clamped;
   const SO3 relative = from.rotation().inverse() * to.rotation();
   const SO3 rotation =
       from.rotation() * SO3::fromRotationVector(relative.rotationVector() * clamped);
@@ -72,19 +73,17 @@ void Cell::buildFrames() {
   // frame graph exists to stop anyone having to remember.
   base_ = frames_
               .declareFrame("base", world_,
-                            SE3(SO3::fromRPY(0.0, 0.0, kPi / 2),
-                                Vec3{0.0, 0.0, 0.35}))
+                            SE3(SO3::fromRPY(0.0, 0.0, kPi / 2), Vec3{0.0, 0.0, 0.35}))
               .value;
 
-  flange_ = frames_
-                .declareFrame("flange", base_,
-                              SE3(SO3::fromRPY(0.0, -kPi / 2, 0.0),
-                                  Vec3{0.45, 0.0, 0.60}))
-                .value;
+  flange_ =
+      frames_
+          .declareFrame("flange", base_,
+                        SE3(SO3::fromRPY(0.0, -kPi / 2, 0.0), Vec3{0.45, 0.0, 0.60}))
+          .value;
 
   // Tool centre point: 125 mm along the flange's z axis.
-  tcp_ = frames_
-             .declareFrame("tcp", flange_, SE3::fromTranslation(Vec3{0.0, 0.0, 0.125}))
+  tcp_ = frames_.declareFrame("tcp", flange_, SE3::fromTranslation(Vec3{0.0, 0.0, 0.125}))
              .value;
 
   // Bin and fixture are furniture: fixed in the world, not on the arm.
@@ -138,7 +137,7 @@ motionkit::SE3 Cell::targetForPhase(CellPhase phase) const {
 
 void Cell::advance(std::uint64_t /*now_ns*/) {
   static constexpr CellPhase kOrder[] = {
-      CellPhase::kApproachBin, CellPhase::kDescendToPart, CellPhase::kGrasp,
+      CellPhase::kApproachBin, CellPhase::kDescendToPart,     CellPhase::kGrasp,
       CellPhase::kLift,        CellPhase::kTransferToFixture, CellPhase::kPlace,
       CellPhase::kRetreat,
   };

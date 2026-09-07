@@ -7,8 +7,9 @@
 #include <string>
 #include <thread>
 
-#include "cell/safety_link.hpp"
 #include "safeedge/ipc/seqlock_slot.hpp"
+
+#include "cell/safety_link.hpp"
 
 namespace pickcell {
 
@@ -48,8 +49,7 @@ class HttpPollSafetyLink final : public SafetyLink {
   };
 
   HttpPollSafetyLink(std::string host, std::uint16_t port, std::string path,
-                     std::chrono::milliseconds period,
-                     Format format = Format::kStamped);
+                     std::chrono::milliseconds period, Format format = Format::kStamped);
   ~HttpPollSafetyLink() override;
 
   SafetyView poll() override;

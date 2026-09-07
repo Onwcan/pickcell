@@ -3,9 +3,10 @@
 
 #include <string>
 
-#include "cell/safety_link.hpp"
 #include "safeedge/ipc/seqlock_slot.hpp"
 #include "safeedge/ipc/shared_memory.hpp"
+
+#include "cell/safety_link.hpp"
 
 namespace pickcell {
 

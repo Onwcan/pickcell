@@ -1,0 +1,23 @@
+---
+BasedOnStyle: Google
+Standard: c++20
+ColumnLimit: 90
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<gtest/'
+    Priority: 1
+  - Regex: '^<.*\.h>'
+    Priority: 2
+  - Regex: '^<.*>'
+    Priority: 3
+  # The sibling projects are third-party headers from here, which is what makes
+  # this file differ from the identical ones in motionkit and safeedge: this is
+  # the repository that consumes all three rather than being one of them.
+  - Regex: '^"(motionkit|robot|safeedge)/'
+    Priority: 4
+  - Regex: '^"cell/'
+    Priority: 5
+  - Regex: '.*'
+    Priority: 6

@@ -12,9 +12,9 @@ namespace pickcell {
 using Clock = std::chrono::steady_clock;
 
 inline std::uint64_t nowNanos() noexcept {
-  return static_cast<std::uint64_t>(
-      std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now().time_since_epoch())
-          .count());
+  return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                        Clock::now().time_since_epoch())
+                                        .count());
 }
 
 /// The safety signal as it is written by the runtime and read by the cell.

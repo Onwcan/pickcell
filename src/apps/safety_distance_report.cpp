@@ -15,8 +15,9 @@
 #include <cstdio>
 #include <string>
 
-#include "cell/safety_distance.hpp"
 #include "motionkit/core/trajectory.hpp"
+
+#include "cell/safety_distance.hpp"
 
 namespace {
 
@@ -78,8 +79,7 @@ int main() {
     // The braking column is identical down every row, which is the point of
     // printing it: the link cannot change how the arm decelerates, only how
     // long it takes to be told to.
-    const auto reference =
-        pickcell::stoppingDistance(speed, 0, kCellAxisLimits);
+    const auto reference = pickcell::stoppingDistance(speed, 0, kCellAxisLimits);
     if (reference) {
       std::printf("  braking alone takes %.0f ms and is the same for every link\n\n",
                   reference.value.braking_seconds * 1000.0);
@@ -113,10 +113,10 @@ int main() {
   // Computed rather than written down, so the observation cannot outlive the
   // numbers it is about.
   const auto ratioAt = [](double speed) -> double {
-    const auto fast = pickcell::stoppingDistance(speed, kLinks[0].worst_reaction_ns,
-                                                 kCellAxisLimits);
-    const auto slow = pickcell::stoppingDistance(speed, kLinks[3].worst_reaction_ns,
-                                                 kCellAxisLimits);
+    const auto fast =
+        pickcell::stoppingDistance(speed, kLinks[0].worst_reaction_ns, kCellAxisLimits);
+    const auto slow =
+        pickcell::stoppingDistance(speed, kLinks[3].worst_reaction_ns, kCellAxisLimits);
     return (fast && slow) ? slow.value.total_m / fast.value.total_m : 0.0;
   };
   std::printf(
@@ -130,18 +130,16 @@ int main() {
       "machine has almost no braking distance to hide a slow link behind. \"We\n"
       "run slowly here, so latency does not matter\" has it backwards.\n\n",
       ratioAt(0.25), ratioAt(2.0),
-      millimetres(pickcell::stoppingDistance(2.0, kLinks[3].worst_reaction_ns,
-                                             kCellAxisLimits)
-                      .value.total_m -
-                  pickcell::stoppingDistance(2.0, kLinks[0].worst_reaction_ns,
-                                             kCellAxisLimits)
-                      .value.total_m),
-      millimetres(pickcell::stoppingDistance(0.25, kLinks[3].worst_reaction_ns,
-                                             kCellAxisLimits)
-                      .value.total_m -
-                  pickcell::stoppingDistance(0.25, kLinks[0].worst_reaction_ns,
-                                             kCellAxisLimits)
-                      .value.total_m));
+      millimetres(
+          pickcell::stoppingDistance(2.0, kLinks[3].worst_reaction_ns, kCellAxisLimits)
+              .value.total_m -
+          pickcell::stoppingDistance(2.0, kLinks[0].worst_reaction_ns, kCellAxisLimits)
+              .value.total_m),
+      millimetres(
+          pickcell::stoppingDistance(0.25, kLinks[3].worst_reaction_ns, kCellAxisLimits)
+              .value.total_m -
+          pickcell::stoppingDistance(0.25, kLinks[0].worst_reaction_ns, kCellAxisLimits)
+              .value.total_m));
 
   std::printf(
       "\nWhat this says\n"

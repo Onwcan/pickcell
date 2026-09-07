@@ -23,11 +23,12 @@
 #include <thread>
 #include <vector>
 
+#include "safeedge/edge/http_server.hpp"
+
 #include "cell/cell.hpp"
 #include "cell/http_poll_link.hpp"
 #include "cell/safety_link.hpp"
 #include "cell/shared_memory_link.hpp"
-#include "safeedge/edge/http_server.hpp"
 
 namespace {
 
@@ -43,7 +44,8 @@ constexpr const char* kRegionName = "/pickcell-reaction-bench";
 /// sources as much as the links.
 class SafetySource {
  public:
-  explicit SafetySource(std::uint16_t port) : shm_(SharedMemorySafetyLink::create(kRegionName)) {
+  explicit SafetySource(std::uint16_t port)
+      : shm_(SharedMemorySafetyLink::create(kRegionName)) {
     current_.sequence = 1;
     current_.torque_permitted = 1;
     current_.asserted_monotonic_ns = nowNanos();
@@ -140,7 +142,8 @@ struct Summary {
     }
     std::vector<std::uint64_t> sorted = samples;
     std::sort(sorted.begin(), sorted.end());
-    const auto index = static_cast<std::size_t>(fraction * static_cast<double>(sorted.size() - 1));
+    const auto index =
+        static_cast<std::size_t>(fraction * static_cast<double>(sorted.size() - 1));
     return sorted[index];
   }
 };
@@ -207,9 +210,9 @@ void report(const Summary& summary) {
   }
   const auto us = [](std::uint64_t ns) { return static_cast<double>(ns) / 1000.0; };
   std::printf("%-28s n=%-4zu  min %9.1f  p50 %9.1f  p99 %9.1f  max %9.1f\n",
-              summary.link.c_str(), summary.samples.size(),
-              us(summary.percentile(0.0)), us(summary.percentile(0.50)),
-              us(summary.percentile(0.99)), us(summary.percentile(1.0)));
+              summary.link.c_str(), summary.samples.size(), us(summary.percentile(0.0)),
+              us(summary.percentile(0.50)), us(summary.percentile(0.99)),
+              us(summary.percentile(1.0)));
 }
 
 }  // namespace
@@ -239,7 +242,8 @@ int main(int argc, char** argv) {
   }
 
   std::printf("## Safety reaction time, decision to cell stop\n\n");
-  std::printf("One source, two links, %d trials each. The cell runs a 1 kHz control\n", trials);
+  std::printf("One source, two links, %d trials each. The cell runs a 1 kHz control\n",
+              trials);
   std::printf("loop; the trip instant is randomised so the result is not an artefact\n");
   std::printf("of phase-locking with the poller. Microseconds.\n\n");
 

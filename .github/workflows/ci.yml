@@ -17,6 +17,20 @@ jobs:
   # repositories, so a broken export, a renamed target or a header that only
   # resolves in-tree fails here. That is the point: it consumes them the way a
   # third party would, and nothing else in the column checks that from outside.
+  # Its own job rather than a step on the build: checking formatting needs no
+  # compiler and no dependencies, so it has no reason to wait behind protobuf
+  # and every reason to fail in thirty seconds instead of ten minutes.
+  format:
+    name: formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format-18
+      # The same script a developer runs, so the two cannot drift.
+      - name: Check formatting
+        run: bash scripts/format.sh --check
+
   build:
     name: build against the published dependencies
     runs-on: ubuntu-24.04
