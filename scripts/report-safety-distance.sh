@@ -24,7 +24,11 @@ if [ ! -x "$BIN" ]; then
   BIN="$BUILD/pickcell-safety-distance"
 fi
 if [ ! -x "$BIN" ]; then
+  # Naming the fix rather than only the symptom. A build that targeted one
+  # executable rather than all of them is the likely reason, and that is exactly
+  # how this failed in CI the first time.
   echo "pickcell-safety-distance not found under $BUILD" >&2
+  echo "build it with: cmake --build $BUILD --target pickcell_safety_distance" >&2
   exit 1
 fi
 

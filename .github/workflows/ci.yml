@@ -45,6 +45,39 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+      # Deterministic: arithmetic over figures already measured, not a fresh
+      # measurement, so it belongs in this job rather than beside the timing one.
+      # It lives here for a second reason too -- this is the job that builds
+      # every target. The first version sat in the reaction job, which builds
+      # only `pickcell-reaction` to keep itself quick, so the binary it needed
+      # had never been compiled and the step failed on a missing file rather
+      # than on anything it was meant to check.
+      #
+      # The invariant is the one the whole report rests on: a slower link can
+      # never permit more speed through the same gap.
+      - name: The stopping-distance report holds its own invariants
+        run: |
+          bash scripts/report-safety-distance.sh build /tmp/distance-evidence             | tee distance.txt
+          shared="$(awk '/^ +200 mm/ { print $3 }' distance.txt)"
+          polled="$(awk '/^ +200 mm/ { print $6 }' distance.txt)"
+          if [ -z "$shared" ] || [ -z "$polled" ]; then
+            echo "could not find the 200 mm row in the report" >&2
+            exit 1
+          fi
+          echo "through 200 mm: shared memory ${shared} m/s, 200 ms poll ${polled} m/s"
+          awk -v a="$shared" -v b="$polled" 'BEGIN { exit (a > b) ? 0 : 1 }' || {
+            echo "the slower link permitted at least as much speed" >&2
+            exit 1
+          }
+
+      - name: Upload the stopping-distance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-distance-${{ github.run_id }}
+          path: distance.txt
+          if-no-files-found: warn
+
   # The measurement, re-run on a different machine.
   #
   # Absolute timings on a shared CI runner are not trustworthy and this job does
@@ -95,29 +128,12 @@ jobs:
             exit 1
           }
 
-      # Deterministic: arithmetic over the figures already measured, not a fresh
-      # measurement, so it can assert exact values without racing a shared
-      # runner. The invariant that matters is the one the report is built on --
-      # a slower link can never permit more speed through the same gap.
-      - name: The stopping-distance report holds its own invariants
-        run: |
-          bash scripts/report-safety-distance.sh build /tmp/distance-evidence             | tee distance.txt
-          shared="$(awk '/^ +200 mm/ { print $3 }' distance.txt)"
-          polled="$(awk '/^ +200 mm/ { print $6 }' distance.txt)"
-          echo "through 200 mm: shared memory ${shared} m/s, 200 ms poll ${polled} m/s"
-          awk -v a="$shared" -v b="$polled" 'BEGIN { exit (a > b) ? 0 : 1 }' || {
-            echo "the slower link permitted at least as much speed" >&2
-            exit 1
-          }
-
       - name: Upload the run's measurement
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reaction-${{ github.run_id }}
-          path: |
-            reaction.txt
-            distance.txt
+          path: reaction.txt
           if-no-files-found: error
 
   container:
