@@ -84,6 +84,57 @@ jobs:
             exit 1
           }
 
+      # Integrity of the frozen artifacts, verifiable by anyone with one standard
+      # command. Deliberately outside the C++ runtime: a file check is no reason
+      # to pull a crypto dependency into a library, and an external party should
+      # not need to build this repository to confirm the bytes they were sent.
+      # Git history remains the actual publication record; this makes accidental
+      # or silent modification fail loudly.
+      - name: The frozen artifacts match their recorded digests
+        run: |
+          cd docs/external-validation
+          sha256sum -c MANIFEST.sha256
+          # An artifact nobody recorded is an artifact nobody can verify.
+          for f in README.md *.json *.csv; do
+            grep -q "  $f\$" MANIFEST.sha256 || {
+              echo "$f is not listed in MANIFEST.sha256" >&2
+              exit 1
+            }
+          done
+
+      # The drift test in the suite asserts the committed package matches the
+      # generator, but both sides come from the same code -- so a malformed
+      # string would round trip happily. This is the only check that the files an
+      # external party is asked to consume actually parse, and that the pin they
+      # rest on is real.
+      - name: The frozen validation package is well formed
+        run: |
+          python3 - <<'EOF'
+          import io, json, re
+          scenario = json.load(io.open('docs/external-validation/scenario-v1.json'))
+          prediction = json.load(io.open('docs/external-validation/prediction-v1.json'))
+          assert scenario['scenario_id'] == prediction['scenario_id']
+          assert scenario['version'] == prediction['version']
+          assert scenario['frozen'] is True
+          assert prediction['preregistered'] is True
+          assert prediction['agreement_rule']['fixed_before_any_external_result'] is True
+          assert scenario['hazard_plane']['interacts_with_the_body'] is False, 'the hazard plane must not be a physical collider'
+          segments = scenario['commanded_braking_law']['segments']
+          assert len(segments) == scenario['commanded_braking_law']['segment_count']
+          assert all(s['duration_s'] > 0 for s in segments), 'a described segment is degenerate'
+          # A floating dependency would mean the SHA does not identify the
+          # stopping law, which is the whole basis of the pre-registration.
+          for name, rev in scenario['implementation_provenance'].items():
+              if name in ('provenance', 'note'):
+                  continue
+              assert re.fullmatch(r'[0-9a-f]{40}', rev), '%s is not pinned: %s' % (name, rev)
+          print('validation package OK:', scenario['scenario_id'],
+                'v%d,' % scenario['version'], len(segments), 'segments,',
+                'total(T) = %s*T + %s m' % (
+                    prediction['prediction_is_a_function_of_reaction_time']['initial_velocity_mps'],
+                    prediction['prediction_is_a_function_of_reaction_time']['braking_distance_m']))
+          EOF
+
       - name: Upload the stopping-distance report
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,0 +1,94 @@
+{
+  "schema": "pickcell.external-validation.prediction",
+  "scenario_id": "pickcell-stopping-distance-xcheck",
+  "version": 1,
+  "preregistered": true,
+  "note": "produced by the same code path as the public evidence. Nothing here is hand-entered, and nothing here may be revised after an external result exists",
+  "prediction_is_a_function_of_reaction_time": {
+    "provenance": "DERIVED",
+    "why": "the simulator varies the polling interval and reports the reaction time it observes. Predicting a fixed distance would require predicting that reaction time, which this package deliberately does not do",
+    "formula": "total_stopping_distance_m = initial_velocity_mps * T + braking_distance_m",
+    "T_is": "t_profile_start - t_hazard_assertion, as defined in the scenario semantics. Not stop-signal observation latency: the formula is only exact if T is the duration of the constant-speed phase, which ends where profile integration begins",
+    "initial_velocity_mps": 2.000000000,
+    "braking_distance_m": 0.450000000,
+    "braking_duration_s": 0.450000000,
+    "braking_distance_independent_of_reaction_time": "the state at brake onset is the frozen state however long the signal took, so the braking term is constant across every run",
+    "clearance_at_stop_m": "hazard_plane_m - total_stopping_distance_m",
+    "hazard_crossing_classification": "stated symbolically, because the numeric distance tolerance delta_m is deliberately not instantiated until the simulator parameters are known. Given the frozen delta_m from gate 2: stop_position < hazard_plane_m - delta_m is CLEAR; stop_position > hazard_plane_m + delta_m is CROSSED; otherwise INDETERMINATE. The classification therefore inherits the declared numerical uncertainty rather than introducing a constant of its own",
+    "analytical_boundary_m": "the exact boundary is total_stopping_distance_m = hazard_plane_m, which for the analytical prediction occurs at the reaction time below",
+    "collision_crossing_reaction_s": 0.125000000
+  },
+  "worked_example": {
+    "provenance": "MEASURED input, DERIVED outputs",
+    "note": "the formula evaluated at ONE reaction time this repository measured, so the arithmetic can be checked before any external run. It is not a prediction of what the simulator will observe",
+    "reaction_s": 0.191000000,
+    "reaction_travel_m": 0.382000000,
+    "braking_distance_m": 0.450000000,
+    "total_stopping_distance_m": 0.832000000,
+    "clearance_at_stop_m": -0.132000000,
+    "hazard_crossing": "analytically the stop lies beyond the plane at this reaction time. A final CLEAR / CROSSED / INDETERMINATE classification is not stated here, because it depends on delta_m, which is instantiated only once the simulator parameters are known"
+  },
+  "stop_threshold_residual": {
+    "provenance": "DERIVED",
+    "description": "distance still to travel at the moment speed first falls below the threshold. Taken from the generated profile, not from a constant-deceleration tail approximation, because the tail of a jerk-limited stop has acceleration going to zero with the velocity",
+    "by_threshold_mps": [
+      { "threshold_mps": 0.010000, "residual_travel_m": 0.000074535599 },
+      { "threshold_mps": 0.001000, "residual_travel_m": 0.000002357023 },
+      { "threshold_mps": 0.000100, "residual_travel_m": 0.000000074536 }
+    ]
+  },
+  "agreement_rule": {
+    "fixed_before_any_external_result": true,
+    "gate_1_same_experiment": {
+      "what_it_checks": "that both sides ran the same experiment, NOT that they arrived at the same numbers. It is a semantic gate",
+      "requires_confirmation_of": [
+        "one translational degree of freedom, motion along +x, no reversal",
+        "initial velocity and initial acceleration as given in the scenario",
+        "the acceleration and jerk limits as given",
+        "the commanded segment durations and jerk values as given",
+        "no gravity component along the travel axis and no external contact before the hazard plane",
+        "velocity held constant during the reaction interval"
+      ],
+      "explicitly_not_required": "that the simulator's integrated velocity trace reproduce the reference trace. Numerical deviation in the integrated solution is part of what this cross-check is measuring; treating it as a precondition would discard the result being sought",
+      "outcome_if_failed": "a different experiment was run. The distance comparison is not meaningful and the mismatch is the finding"
+    },
+    "gate_2_distance": {
+      "quantity": "total_stopping_distance_m, per run, against the formula evaluated at that run's reported reaction time",
+      "tolerance_terms": {
+        "stop_threshold_residual_m": "read from the table above at the velocity threshold the simulator actually used",
+        "numerical_solution_error_m": "NOT ASSUMED HERE. A per-step position error proportional to velocity times timestep is a heuristic for a first-order explicit scheme and is not a bound for an arbitrary integrator, so this term is instantiated from the parameters below rather than guessed. It is not zero merely because gate 1 passed: agreeing on the experiment says nothing about the numerical error in solving it",
+        "reaction_time_resolution_m": "initial_velocity_mps times the resolution or quantisation of the reported reaction time, since the prediction is evaluated at that reported value"
+      },
+      "agreement": "absolute difference within the sum of the instantiated terms",
+      "meaningful_deviation": "absolute difference exceeding that sum. This is a discrepancy requiring investigation, not proof that either model is wrong: it could arise from modelling assumptions, numerical integration, experiment semantics, configuration or a defect on either side",
+      "forbidden": "instantiating or widening any term after the measured stopping distances are known",
+      "protocol": {
+        "why_two_phases": "asking for solver settings and measured distances in one exchange, then claiming the tolerance was fixed before the distances were seen, is a contradiction. The phases separate them so the ordering is real rather than asserted",
+        "phase_a_metadata_only": [
+          "simulator version and exact commit revision",
+          "physics timestep",
+          "substeps per step, if the integrator uses them",
+          "solver or integrator identification and any settings that bear on local and accumulated position error",
+          "the velocity threshold at which the run declares the axis stopped, and its semantics",
+          "the resolution at which reaction time is reported, and whether values are rounded, truncated, or taken directly from simulation ticks",
+          "the raw simulation timestamps or tick indices for t_hazard_assertion, t_stop_signal_observed and t_profile_start. The first and third define T; the second is diagnostic and lets T be decomposed into detection and control-application latency. Supplying the ticks lets T be recomputed from the simulation timeline rather than trusted as a rounded scalar",
+          "how poll boundaries are represented, so the frozen phase schedule can be expressed in terms the implementation actually has"
+        ],
+        "then": "delta_m is instantiated and frozen, and the frozen value is committed to this repository in its own commit before any measured distance is received. Git history then carries the ordering, which is the only part of this protocol that cannot be asserted after the fact",
+        "phase_b_measured_outputs": [
+          "per trial, keyed by polling interval and phase fraction: t_hazard_assertion, t_stop_signal_observed, t_profile_start, the resulting T, stopping distance, clearance, and hazard-plane crossing state",
+          "if practical, the timestamp or tick of the poll boundary preceding each hazard assertion, so the realised phase can be audited against the frozen fraction. Provenance, not an acceptance gate",
+          "optionally the simulated velocity trace",
+          "commands or configuration sufficient to reproduce the run"
+        ],
+        "if_already_run": "the measured outputs should be withheld until the tolerance freeze is acknowledged. Having the numbers in hand is not the problem; our seeing them before the criterion is fixed is"
+      },
+      "ordering": "the numeric tolerance is frozen AFTER phase A and BEFORE phase B. Fixing it earlier would mean guessing at an integrator; fixing it later would mean choosing a tolerance that accommodates the answer"
+    },
+    "diagnostic_trace_comparison": {
+      "status": "diagnostic, not a gate",
+      "purpose": "if the simulator can return its own velocity trace, comparing it against the reference trace localises WHERE a distance discrepancy arises rather than only that one exists",
+      "tolerance": "instantiated with the same parameters as gate 2 and applied per sample to velocity. A deviation here is information about the integrator, and on its own does not invalidate the run"
+    }
+  }
+}

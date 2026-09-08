@@ -16,7 +16,12 @@ include(GoogleTest)
 add_executable(pickcell_tests
   test_cell.cpp
   test_dead_writer.cpp
-  test_safety_distance.cpp)
+  test_safety_distance.cpp
+  test_validation_package.cpp)
 target_link_libraries(pickcell_tests
   PRIVATE pickcell::cell GTest::gtest_main motionkit::warnings)
+# The drift test compares the committed package against the generator, so it has
+# to be able to find the committed files.
+target_compile_definitions(pickcell_tests
+  PRIVATE PICKCELL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
 gtest_discover_tests(pickcell_tests PROPERTIES LABELS integration DISCOVERY_TIMEOUT 30)

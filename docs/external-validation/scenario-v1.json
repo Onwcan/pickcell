@@ -1,0 +1,110 @@
+{
+  "schema": "pickcell.external-validation.scenario",
+  "scenario_id": "pickcell-stopping-distance-xcheck",
+  "version": 1,
+  "frozen": true,
+  "provenance_legend": {
+    "MEASURED": "produced by this repository's own benchmarks. Context here, never an assumption this experiment relies on",
+    "CONFIGURED": "chosen for this scenario and held fixed",
+    "DERIVED": "computed from the entries above",
+    "REPORTED_BY_SIMULATOR": "an output of the external run, not predicted here"
+  },
+  "implementation_provenance": {
+    "provenance": "CONFIGURED",
+    "note": "a pickcell commit does not by itself identify the stopping law, because the library that computes it is fetched. These are the revisions this repository pins and builds against; they are supplied by the build system rather than typed here, so they cannot drift from what was actually compiled",
+    "motionkit": "874fcc74d68143a44e4a74c2787aeae7957c7c0b",
+    "robot_contracts": "92461cfdb018a5a184c6ba7aeb21c36ef176b3a3",
+    "safeedge": "9ccd098d80bad237f29b0a43f107cfe92ca7e06f"
+  },
+  "experiment_design": {
+    "type": "one factor",
+    "independent_variable": "stop-signal polling interval",
+    "held_fixed": "the initial state, the limits and the commanded braking law, which are identical in every run",
+    "simulator_outputs": ["reaction time", "stopping distance", "clearance at stop", "collision state"],
+    "reaction_time_is_not_predicted_here": "the simulator reports the reaction time it observes at each interval. This package predicts the stopping distance CONDITIONAL on that reported value. Deriving reaction time from the polling interval would assert the relationship the measurement exists to establish"
+  },
+  "degrees_of_freedom": 1,
+  "motion_model": {
+    "provenance": "CONFIGURED",
+    "description": "a single translational degree of freedom along +x; straight line, constant direction, no gravity component along the travel axis, no joint-space coupling, no external contact before the hazard plane",
+    "initial_position_m": 0.0,
+    "initial_velocity_mps": 2.000000000,
+    "initial_acceleration_mps2": 0.000000000
+  },
+  "limits": {
+    "provenance": "CONFIGURED",
+    "max_velocity_mps": 2.000000000,
+    "max_acceleration_mps2": 8.000000000,
+    "max_jerk_mps3": 40.000000000
+  },
+  "trial_schedule": {
+    "provenance": "CONFIGURED",
+    "independent_variable": "polling_interval_s",
+    "controlled_nuisance_variable": "the phase of the hazard assertion within the poll window. For a fixed interval the reaction time depends on where the hazard lands relative to the polling schedule, so a hazard always asserted at the same absolute instant would phase-lock differently against different intervals and report artifacts of the chosen origin",
+    "hazard_assertion_time": "phase_fraction times polling_interval_s after a poll boundary, with the poller on a regular schedule",
+    "phase_fraction_generator": "frac(k / phi) for k = 1..5, phi = (1 + sqrt(5)) / 2. Both the generator and the concrete values are recorded so reproduction does not depend on anyone else approximating phi; the values below are authoritative and are emitted at round-trip-safe precision",
+    "phase_fraction_rationale": "a low-discrepancy sequence covers the window evenly from five points without clustering, and its generator is not a simple fraction of the interval the way a set such as 0.1, 0.3, 0.5, 0.7, 0.9 would be. That reduces the chance of landing on a timestep boundary; it does not eliminate it, since any floating-point value is rational",
+    "why_frozen_rather_than_random": "not because seeded randomness would be irreproducible, which it would not. A fixed list depends on no RNG implementation or seed-handling convention, every trial is enumerable before anything runs, an outside party can reproduce and audit the schedule by reading it, and the identical schedule applies across every polling interval",
+    "also_spreads_the_reaction_times": "the prediction is evaluated at each run own measured T, so sweeping phase produces a spread of T values. Without it the ladder could return one nearly identical value per interval and the linear prediction would be tested at five points rather than across its range",
+    "phase_fractions": [0.61803398874989501, 0.23606797749979, 0.85410196624968504, 0.47213595499958, 0.090169943749474998],
+    "polling_intervals_s": [0.010000000, 0.025000000, 0.050000000, 0.100000000, 0.200000000],
+    "trial_count": 25,
+    "runs": "every polling interval crossed with every phase fraction, identically. Each trial reports its own T",
+    "phase_audit": "if the simulator can report the timestamp or tick of the poll boundary preceding each hazard assertion, the realised phase can be checked as observed_phase = (t_hazard_assertion - t_preceding_poll_boundary) / polling_interval against the frozen fraction. This is provenance and diagnostics; it is NOT an acceptance gate on the physics result"
+  },
+  "reference_reaction": {
+    "provenance": "MEASURED",
+    "note": "context and provenance, NOT the experiment's input. One point this repository measured, offered so the external numbers have something to sit beside",
+    "source": "evidence/reaction-vs-poll-interval.txt, HTTP poll link, worst case",
+    "poll_interval_s": 0.200000000,
+    "reaction_s": 0.191000000,
+    "control_period_s": 0.001000000
+  },
+  "commanded_braking_law": {
+    "provenance": "DERIVED",
+    "generator": "motionkit::StopProfile::plan",
+    "note": "this is the COMMAND, not a solution. The segments were recovered from the generated profile by locating the instants at which commanded jerk changes, not restated from a formula. An independent simulator should integrate this law with its own solver; its numerical answer is part of the result rather than something to match in advance",
+    "reaches_acceleration_limit": true,
+    "peak_acceleration_mps2": 8.000000000,
+    "duration_s": 0.450000000,
+    "segment_count": 3,
+    "segments": [
+      { "index": 0, "duration_s": 0.200000000, "jerk_mps3": -40.000000000, "entry_velocity_mps": 2.000000000, "entry_acceleration_mps2": 0.000000000 },
+      { "index": 1, "duration_s": 0.050000000, "jerk_mps3": 0.000000000, "entry_velocity_mps": 1.200000000, "entry_acceleration_mps2": -8.000000000 },
+      { "index": 2, "duration_s": 0.200000000, "jerk_mps3": 40.000000000, "entry_velocity_mps": 0.800000000, "entry_acceleration_mps2": -8.000000000 }
+    ]
+  },
+  "hazard_plane": {
+    "provenance": "CONFIGURED",
+    "distance_m": 0.700000000,
+    "description": "a plane at x = the distance above, normal to the direction of travel, measured from the initial tool position",
+    "interacts_with_the_body": false,
+    "zero_force_zero_collision_response": "REQUIRED. The plane must not be a physical collider. The quantity being cross-checked is the FREE stopping distance under the commanded braking law, and a rigid obstacle here would apply a contact impulse that alters the very trajectory the comparison is about. Realise it as a trigger volume, a sensor boundary with collision response disabled, or by post-processing an unobstructed trajectory -- whichever the simulator offers",
+    "crossing_is_observational": "crossing the plane is a derived verdict about a trajectory, not a physical event in it",
+    "analytical_crossing_reaction_s": 0.125000000,
+    "chosen_so_the_verdict_varies": "the plane is reached once the reaction time exceeds that value, which falls inside the range this polling ladder produces. A plane the tool never reaches would yield a column of identical values rather than a check",
+    "role": "stopping distance is the primary physics result. Clearance and crossing are consequences of the simulated trajectory against this plane, not separate independent validations"
+  },
+  "semantics": {
+    "provenance": "CONFIGURED",
+    "reaction_time_T_definition": "T = t_profile_start - t_hazard_assertion. This is authoritative and is NOT the same as stop-signal observation latency",
+    "t_hazard_assertion": "the simulation timestamp at which the stop condition becomes true",
+    "t_profile_start": "the simulation timestamp of the FIRST INTEGRATION STEP that applies the frozen braking jerk, i.e. the step at which commanded jerk becomes -40 m/s^3. Where a simulator distinguishes command issuance, command activation, and the first integration step using the new value, it is the THIRD that defines this boundary",
+    "why_that_boundary": "the prediction splits the motion into constant-speed travel and integration of the braking profile. T must be exactly the duration of the first, or the reaction_travel term is not initial_velocity * T. A simulator can observe the stop signal on one tick and not apply the braking command until a later one; that interval belongs inside T",
+    "t_stop_signal_observed": "requested as well, but DIAGNOSTIC only. It is not necessarily the endpoint of T",
+    "decomposition": "where a simulator has both stages: signal_detection_latency = t_stop_signal_observed - t_hazard_assertion, control_application_latency = t_profile_start - t_stop_signal_observed, and T is their sum",
+    "braking_begins": "at t_profile_start. Velocity is the frozen initial velocity throughout [t_hazard_assertion, t_profile_start) and the commanded braking law is integrated from t_profile_start",
+    "stopped": "the commanded law reaches exactly zero velocity and zero acceleration at the end of its final segment. A simulator declaring a velocity threshold instead should report the threshold it used; stop_threshold_residual gives the distance that choice omits",
+    "stopping_distance": "position at rest minus position at the safety decision, along +x. It includes the travel during the reaction interval",
+    "braking_distance": "position at rest minus position at the start of braking. Independent of the reaction time",
+    "clearance_at_stop": "hazard plane distance minus stopping distance. Positive means the tool stopped short of the plane",
+    "collision": "stopping distance greater than the hazard plane distance, subject to the indeterminate band above",
+    "direction": "motion is along +x throughout; the axis does not reverse, and the commanded law ends at zero velocity and zero acceleration"
+  },
+  "out_of_scope": [
+    "the Linux, HTTP and shared-memory implementations this repository measures. A simulated polling model is not those implementations",
+    "any claim that the simulated reaction time validates this repository's measured reaction time. Both are reported; neither confirms the other",
+    "any claim of safety certification or functional-safety compliance",
+    "multi-axis or joint-space behaviour: this is one degree of freedom by construction"
+  ]
+}
