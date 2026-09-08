@@ -1,0 +1,161 @@
+{
+  "schema": "pickcell.external-validation.tolerance",
+  "scenario_id": "pickcell-stopping-distance-xcheck",
+  "version": 1,
+  "stage": "second-stage instantiation of the gate 2 tolerance. This file does NOT amend the pre-registration; scenario-v1.json, prediction-v1.json, braking-reference-trace-v1.csv and README.md are unchanged and their recorded digests still hold",
+  "frozen": true,
+  "source_package": {
+    "repository": "https://github.com/Onwcan/pickcell",
+    "commit": "cabace5a2c02da4ebbef3494b54ce87b324c348f",
+    "note": "the commit at which the four v1 artifacts were published. The external party verified all four against MANIFEST.sha256 before running anything, and the four files returned in their phase A package are byte-identical to the ones committed here",
+    "artifacts_unchanged_by_this_commit": [
+      "README.md",
+      "scenario-v1.json",
+      "prediction-v1.json",
+      "braking-reference-trace-v1.csv"
+    ]
+  },
+  "ordering": {
+    "instantiated_after_phase_a": true,
+    "instantiated_before_phase_b": true,
+    "phase_b_measured_outputs_seen": false,
+    "what_was_available": "simulator identification, physics and solver configuration, stop semantics, timing representation, command-realisation semantics, the world file, the controller source, and per-trial integer timing ticks",
+    "what_was_withheld": [
+      "reaction time T as a disclosed scalar",
+      "stop position",
+      "stopping distance",
+      "clearance",
+      "crossing classification",
+      "velocity trace"
+    ],
+    "recomputability_note": "the phase A timing rows contain t_hazard_assertion and t_profile_start as integer ticks, so T is recomputable from them. That recomputability was deliberately not used to evaluate the prediction, and no stopping distance was computed from it while instantiating this tolerance. The withheld quantity is the simulator's MEASURED distance, which no arithmetic on timing ticks can produce",
+    "why_it_matters": "the pre-registration states that git history is the only part of the ordering that cannot be asserted after the fact. This file exists so the tolerance has a commit of its own, dated before the measured distances were received"
+  },
+  "phase_a_disclosure": {
+    "provenance": "REPORTED_BY_SIMULATOR",
+    "note": "recorded from the phase A package. These values are inputs to the derivation below, not claims this repository makes",
+    "simulator": {
+      "name": "OmniSim",
+      "version": "8.3.0",
+      "commit": "cdfb678ca4f687eb56742af3509083e02ee149e6"
+    },
+    "physics_runtime": {
+      "newton": "1.5.0",
+      "mujoco": "3.11.0",
+      "backend": "Newton SolverMuJoCo, deterministic reference CPU mj_step path",
+      "device": "cpu"
+    },
+    "why_the_simulator_is_named_here": "the pre-registration is deliberately simulator-agnostic and names no external tool. This file cannot be: the numerical term below is a property of one specific integrator at one specific version, and stating the number without saying which integrator produced it would make it unauditable",
+    "integration": {
+      "basic_timestep_s": 0.001000000,
+      "substeps": 1,
+      "solver_substep_s": 0.001000000,
+      "integrator": "MuJoCo Euler",
+      "constraint_solver": "MuJoCo Newton",
+      "solver_iterations": 100,
+      "line_search_iterations": 50,
+      "solver_tolerance": 1e-08
+    },
+    "model": {
+      "degrees_of_freedom": "one SliderJoint along +x",
+      "body_mass_kg": 1.000000000,
+      "gravity_mps2": 0.000000000,
+      "contact_before_hazard": false,
+      "hazard_has_collision_geometry": false,
+      "joint_damping": "none declared in the world file: the JointParameters node sets only the axis, so dampingConstant, staticFriction, springConstant and armature are all absent",
+      "actuation": "a single LinearMotor driven in direct force mode, maxForce 100 N against a peak commanded 8 N"
+    },
+    "command_realisation": {
+      "method": "the controller samples the frozen jerk law at the midpoint of each 1 ms interval, converts the sampled acceleration to a joint force with F = m*a, and applies it for the upcoming integration step",
+      "first_interval_midpoint_s": 0.000500000,
+      "force_update_period_s": 0.001000000,
+      "profile_duration_s": 0.450000000,
+      "velocity_held_before_profile_start": "zero applied force during the reaction interval, with zero gravity and no damping"
+    },
+    "stop_semantics": {
+      "threshold_mps": 0.000100000,
+      "rule": "first post-integration sample at or after the frozen 0.450 s profile where the absolute velocity is at or below the threshold; a reversal is not accepted as a substitute"
+    },
+    "timing": {
+      "resolution_s": 0.001000000,
+      "representation": "integer simulation ticks; seconds are tick_index * 0.001",
+      "rounding": "no scalar T rounding; T is obtained by integer tick subtraction",
+      "hazard_realisation": "the requested phase time is raised to the first 1 ms tick at or after it",
+      "observation": "the first poll boundary tick at or after the realised hazard tick",
+      "profile_start": "the same controller tick as observation, naming the first upcoming integration interval whose force comes from the frozen jerk of -40 m/s^3"
+    }
+  },
+  "gate_1_semantic_agreement": {
+    "status": "the phase A disclosure already satisfies every semantic requirement gate 1 lists. Recorded here as an observation; the formal gate 1 verdict belongs to the phase B evaluation",
+    "one_dof_along_x": "confirmed: a single SliderJoint with axis 1 0 0",
+    "initial_state": "confirmed: 2.0 m/s established before each trial, zero applied force at profile start so the initial acceleration is zero",
+    "limits_and_commanded_law": "confirmed: the controller's acceleration function reproduces the three frozen segments exactly, including the -40 / 0 / +40 jerk values, the 0.200 / 0.050 / 0.200 s durations and the 8 m/s^2 peak",
+    "no_gravity_no_contact": "confirmed: gravity 0 in the world file, and the hazard plane has no collision geometry",
+    "constant_velocity_through_reaction": "confirmed: zero applied force, zero gravity and no damping, which under this integrator holds velocity exactly"
+  },
+  "tolerance_terms": {
+    "note": "the three terms are exactly those named in prediction-v1.json. No term has been added, removed, renamed or reinterpreted",
+    "stop_threshold_residual_m": {
+      "value": 0.000000074536,
+      "provenance": "READ from the frozen table in prediction-v1.json, not recomputed",
+      "derivation": "the simulator declares a stop at an absolute velocity of 1e-4 m/s. The frozen stop_threshold_residual table gives the distance still to travel at that speed as 0.000000074536 m, taken from the generated jerk-limited profile rather than a constant-deceleration tail approximation",
+      "why_not_recomputed": "the table was published before any external result existed. Recomputing it now would replace a pre-registered number with a post-hoc one for no gain"
+    },
+    "numerical_solution_error_m": {
+      "value": 0.001000000000,
+      "provenance": "DERIVED from the phase A integrator disclosure",
+      "expected_sign": "negative: the simulated stop travels 1 mm LESS than the analytical prediction",
+      "derivation": "MuJoCo's Euler integrator is semi-implicit. The MuJoCo documentation and the 3.11.0 source agree: mj_Euler calls mj_advance with a NULL qvel argument, which advances velocity by qvel += h*qacc and then integrates position with the already-updated velocity, commented in the source as semi-implicit. With no joint damping the implicit-damping branch is bypassed, and with a 1 kg single DOF and no constraints the acceleration is exactly the applied force. So v_{k+1} = v_k + h*a_k and x_{k+1} = x_k + h*v_{k+1}",
+      "closed_form": "x_N - x_0 = trapezoid(v) + (h/2)*(v_N - v_0). The acceleration is sampled at each interval midpoint and the frozen law is piecewise linear with all three boundaries (0.200, 0.250, 0.450 s) on the 1 ms grid, so the midpoint rule integrates it exactly and the discrete velocities equal the analytical ones at every node. The trapezoidal error over a piecewise-quadratic velocity is j*h^3/12 per interval, and the profile's jerk integral is zero (200 intervals at -40 and 200 at +40), so that term vanishes identically. What remains is (h/2)*(v_N - v_0) = 0.0005 * (0 - 2.0) = -0.001 m",
+      "magnitude_is_half_a_timestep_of_the_velocity_change": "the term is exactly (timestep / 2) times the total velocity change, which is why it does not depend on the reaction time: the same 2.0 m/s is removed in every trial",
+      "reaction_interval_contributes_nothing": "with zero applied force the velocity is unchanged and position advances by exactly h*v0 per step, so semi-implicit Euler is exact there and the 2.0 * T term carries no discretisation error",
+      "independent_checks": [
+        "step-by-step simulation of the disclosed scheme in exact rational arithmetic: braking distance 449/1000 m, error exactly -1/1000 m, and the velocity after 450 steps is exactly zero",
+        "the closed form above, which agrees with the step-by-step result exactly",
+        "the same loop in IEEE doubles: -0.001000000000000 m, agreeing with the rational result to 2.2e-16 m, with a residual velocity of -5.9e-16 m/s that is far inside the 1e-4 m/s stop threshold, so the stop is detected at exactly the 450th step"
+      ],
+      "not_a_generic_bound": "this is not the velocity-times-timestep heuristic the pre-registration warned against. It is an exact property of this integrator applied to this profile on this grid, and it would change if the timestep, the sampling rule or the phase boundaries changed"
+    },
+    "reaction_time_resolution_m": {
+      "value": 0.002000000000,
+      "provenance": "DERIVED by applying the frozen rule to the disclosed resolution",
+      "derivation": "the frozen rule is initial_velocity_mps times the resolution or quantisation of the reported reaction time: 2.0 m/s * 0.001 s = 0.002 m",
+      "realised_contribution_may_be_zero": "reaction time is reported as an integer tick difference rather than a rounded scalar, so the scalar-rounding error this term was written to cover may not arise at all in this run",
+      "why_it_is_retained_anyway": "the frozen rule maps the disclosed timing resolution to a distance without qualification: the simulator declares a resolution of 0.001 s, and the rule says the term is initial_velocity_mps times that resolution. Removing a pre-registered term after reading the disclosure is the post-hoc adjustment the protocol forbids, and no claim beyond the frozen rule is made here to justify keeping it",
+      "acknowledged_effect": "retaining it widens the tolerance and therefore makes agreement easier. That is stated plainly rather than presented as caution"
+    }
+  },
+  "noted_residuals_that_are_not_terms": {
+    "note": "recorded for completeness. The frozen rule has exactly three terms and none has been added",
+    "initial_velocity_spin_up": "the controller accepts an initial velocity within 1e-7 m/s of 2.0. Over the longest trial, under 0.65 s, that is at most 6.5e-8 m, an order of magnitude below the smallest retained term and roughly 46000 times smaller than delta_m",
+    "floating_point_accumulation": "about 2e-16 m over the braking phase, from the double-precision cross-check above",
+    "hazard_phase_realisation": "the requested phase is raised to the next 1 ms tick, so the realised phase differs from the frozen fraction by up to 0.082 of a poll interval at 10 ms and under 0.006 at 200 ms. This does not enter the tolerance: T is measured from the REALISED hazard tick and the distance from the position at that same tick, so the pairing stays internally exact. The pre-registration already classifies the phase audit as provenance rather than an acceptance gate"
+  },
+  "delta_m": {
+    "value": 0.003000074536,
+    "units": "m",
+    "sum_of": [0.000000074536, 0.001000000000, 0.002000000000],
+    "arithmetic": "0.000000074536 + 0.001000000000 + 0.002000000000 = 0.003000074536"
+  },
+  "gate_2": {
+    "quantity": "total_stopping_distance_m, per run",
+    "prediction": "total_stopping_distance_m = 2.000000000 * T + 0.450000000, evaluated at that run's own reported T",
+    "formula": "agreement if abs(measured_stopping_distance_m - (2.0 * T + 0.450)) <= delta_m",
+    "meaningful_deviation": "an absolute difference exceeding delta_m. Per the pre-registration this is a discrepancy requiring investigation, not proof that either model is wrong",
+    "symmetric_by_construction": "the frozen rule compares an absolute difference against the sum of the terms, so the band is symmetric even though the numerical term is a one-sided bias",
+    "declared_diagnostic_expectation": "because the numerical term is a signed prediction rather than a symmetric bound, the expected signed residual is approximately -0.001 m in every trial. This is recorded before the results are seen so that it can fail: a residual clustered near zero, or near +0.001 m, would mean the integrator does not behave as phase A describes. It is a diagnostic, NOT an additional gate, and gate 2 remains the absolute-difference test above"
+  },
+  "hazard_classification": {
+    "hazard_plane_m": 0.700000000,
+    "rule": "inherited from prediction-v1.json, now numeric because delta_m is instantiated",
+    "classified_quantity": "stopping_distance_m, the distance travelled from t_hazard_assertion to rest",
+    "not_an_absolute_coordinate": "the phase A run reports stop_position_m as an absolute world coordinate on a shared axis that is not reset between trials, so it accumulates across the ladder and is not comparable to the frozen plane. The plane is a distance from the hazard assertion, not a point in the simulator's world frame",
+    "resolves_a_v1_ambiguity": "prediction-v1.json phrases the symbolic classification with the word stop_position. scenario-v1.json is the more specific of the two and defines collision as stopping distance greater than the hazard plane distance, and clearance as the plane minus the stopping distance. This file therefore reads the frozen rule as being about stopping distance. The v1 artifacts are unchanged; only the reading is stated explicitly here, and delta_m is unaffected",
+    "clear_if": "stopping_distance_m < 0.696999925464",
+    "crossed_if": "stopping_distance_m > 0.703000074536",
+    "indeterminate_otherwise": "0.696999925464 <= stopping_distance_m <= 0.703000074536",
+    "clearance_at_stop_m": "0.700000000 - stopping_distance_m",
+    "arithmetic": "0.700000000 - 0.003000074536 = 0.696999925464 and 0.700000000 + 0.003000074536 = 0.703000074536"
+  },
+  "forbidden_from_here": "instantiating, widening or reinterpreting any term now that this file is committed. If the phase B results fall outside delta_m, the finding is the discrepancy"
+}

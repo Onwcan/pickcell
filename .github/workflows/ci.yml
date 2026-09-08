@@ -135,6 +135,79 @@ jobs:
                     prediction['prediction_is_a_function_of_reaction_time']['braking_distance_m']))
           EOF
 
+      # The tolerance is a second-stage artifact: instantiated once the external
+      # simulator's configuration was known and before its measured distances
+      # were. Nothing downstream can re-derive it, so this checks the two things
+      # that would make it worthless -- arithmetic that does not add up, and a v1
+      # artifact that moved underneath it after the prediction was published.
+      - name: The frozen tolerance adds up and v1 has not moved
+        run: |
+          python3 - <<'EOF'
+          import hashlib, io, json
+          from decimal import Decimal
+          root = 'docs/external-validation/'
+          load = lambda p: json.load(io.open(root + p), parse_float=Decimal)
+          scenario = load('scenario-v1.json')
+          prediction = load('prediction-v1.json')
+          tolerance = load('tolerance-v1.json')
+          assert tolerance['scenario_id'] == scenario['scenario_id']
+          assert tolerance['version'] == scenario['version']
+          assert tolerance['frozen'] is True
+          # The ordering is the one part of this protocol that cannot be asserted
+          # after the fact, so it is asserted here and dated by the commit.
+          order = tolerance['ordering']
+          assert order['instantiated_after_phase_a'] is True
+          assert order['instantiated_before_phase_b'] is True
+          assert order['phase_b_measured_outputs_seen'] is False, 'the tolerance was fixed after seeing results'
+          # Exactly the three terms the pre-registration named: no more, no fewer.
+          terms = tolerance['tolerance_terms']
+          named = {'stop_threshold_residual_m', 'numerical_solution_error_m', 'reaction_time_resolution_m'}
+          assert set(terms) - {'note'} == named, 'the tolerance terms no longer match the frozen rule'
+          # The stop-threshold term is read from the frozen table rather than reinvented.
+          threshold = tolerance['phase_a_disclosure']['stop_semantics']['threshold_mps']
+          row = [r for r in prediction['stop_threshold_residual']['by_threshold_mps']
+                 if r['threshold_mps'] == threshold]
+          assert len(row) == 1, 'no frozen residual for threshold %s' % threshold
+          assert terms['stop_threshold_residual_m']['value'] == row[0]['residual_travel_m']
+          # The reaction-time term is the frozen rule applied to the disclosed resolution.
+          v0 = prediction['prediction_is_a_function_of_reaction_time']['initial_velocity_mps']
+          assert terms['reaction_time_resolution_m']['value'] == \
+              v0 * tolerance['phase_a_disclosure']['timing']['resolution_s']
+          delta = tolerance['delta_m']['value']
+          assert delta == sum(terms[k]['value'] for k in named), 'delta_m is not the sum of its terms'
+          assert delta == sum(tolerance['delta_m']['sum_of'])
+          plane = tolerance['hazard_classification']['hazard_plane_m']
+          assert plane == scenario['hazard_plane']['distance_m']
+          # The plane is a distance from the hazard assertion, not a point in the
+          # simulator's world frame. An absolute coordinate on an axis that is not
+          # reset between trials accumulates across the ladder, so classifying one
+          # against 0.700 m would be meaningless -- pin the quantity by name.
+          hazard = tolerance['hazard_classification']
+          assert hazard['classified_quantity'].startswith('stopping_distance_m')
+          assert hazard['clear_if'] == 'stopping_distance_m < %s' % (plane - delta)
+          assert hazard['crossed_if'] == 'stopping_distance_m > %s' % (plane + delta)
+          assert hazard['indeterminate_otherwise'] == \
+              '%s <= stopping_distance_m <= %s' % (plane - delta, plane + delta)
+          # v1 is immutable. sha256sum -c only proves the files match the manifest,
+          # and a manifest can be regenerated alongside an edit -- so the digests
+          # published to the external party are pinned here too.
+          published = {
+              'README.md': '8adc751d43eb93f12cb2116b1dbb900bb7bdd26ed6b8a435516c0ee10da19ace',
+              'scenario-v1.json': '61954a2b0f8d6195421e49f95f676e447e662a793faa540ccbc9c780280e6bb9',
+              'prediction-v1.json': 'f767a0d65c7f2ffa8562bb60a3ff2858dd9fe1afb61f4eba573f4fd931001a7a',
+              'braking-reference-trace-v1.csv': '167b45ee8cd8954fee0695acf3865797d50a6efd7cb25ca0db19ac1a699321ab',
+          }
+          for name, digest in published.items():
+              actual = hashlib.sha256(io.open(root + name, 'rb').read()).hexdigest()
+              assert actual == digest, '%s changed after publication: %s' % (name, actual)
+          plain = lambda d: format(d, 'f')
+          print('tolerance OK: delta_m = %s m from %s + %s + %s' % (
+              plain(delta), plain(terms['stop_threshold_residual_m']['value']),
+              plain(terms['numerical_solution_error_m']['value']),
+              plain(terms['reaction_time_resolution_m']['value'])))
+          print('  CLEAR < %s, CROSSED > %s, v1 artifacts unchanged' % (plane - delta, plane + delta))
+          EOF
+
       - name: Upload the stopping-distance report
         if: always()
         uses: actions/upload-artifact@v4
