@@ -31,6 +31,23 @@ jobs:
       - name: Check formatting
         run: bash scripts/format.sh --check
 
+  # The external result, rechecked from the evidence rather than believed.
+  #
+  # Its own job, and deliberately not attached to the build: the claim this
+  # repository makes about the external cross-check is that anyone can verify it
+  # offline from frozen files, with no compiler, no network and no simulator. A
+  # job that needs none of those is the honest way to demonstrate that, and it
+  # fails in seconds rather than after the C++ column.
+  external-validation:
+    name: the external result recomputes
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Standard library only, so there is nothing to install.
+      - name: The external phase B result recomputes from the raw measurement
+        run: python3 tools/verify_external_phase_b.py
+
   build:
     name: build against the published dependencies
     runs-on: ubuntu-24.04

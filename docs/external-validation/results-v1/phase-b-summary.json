@@ -1,0 +1,187 @@
+{
+  "schema": "pickcell.external-validation.result",
+  "scenario_id": "pickcell-stopping-distance-xcheck",
+  "scenario_version": 1,
+  "stage": "phase B result layer. This file states an outcome; it does not amend the pre-registration or the tolerance, and neither of those was touched by the commit that adds it",
+  "independently_recomputed": true,
+  "recomputation_note": "every DERIVED quantity below -- reaction time, stopping distance, the prediction, the residual, the gate 2 verdict, the clearance, the hazard classification and every summary statistic -- was recomputed from phase-b-raw-held.json and the frozen artifacts by tools/verify_external_phase_b.py. The collaborator's own summary, report and classified table were read only to check that they agreed, and are not the source of a derived value here",
+  "taken_as_given_from_the_external_party": "the measured evidence itself (per-trial positions, ticks and stop velocities) and the provenance around it (simulator identity and version, the configuration, and the statement that the run was not repeated after the tolerance was frozen). This repository cannot derive those from anything it holds; it verifies their digests and recomputes everything downstream of them",
+  "ordering": {
+    "1_prediction_preregistered": "cabace5a2c02da4ebbef3494b54ce87b324c348f",
+    "2_phase_a_metadata_disclosed": "simulator, integrator, solver, stop semantics, timing representation and per-trial timing ticks, with every measured distance withheld",
+    "3_tolerance_frozen": "1490238eb35e4b4dfce115c428b7d5907eadf58a",
+    "4_phase_b_disclosed": "the already-held measured outputs were released only after the tolerance commit existed",
+    "5_this_result": "evaluates already-held data against an already-frozen criterion",
+    "what_git_history_establishes": "the ordering of the public commits: the pre-registration at cabace5a2c02da4ebbef3494b54ce87b324c348f, the tolerance freeze at 1490238eb35e4b4dfce115c428b7d5907eadf58a, and this result layer after both",
+    "what_git_history_does_not_establish": "that phase A was disclosed between the first two, or that phase B was released only after the tolerance freeze. Those are documented by the preserved external evidence and correspondence rather than by git history alone. Committing the phase A timing file puts the disclosed metadata on the public record here; the timing of the phase B release rests on the external party's account"
+  },
+  "preregistration_commit": "cabace5a2c02da4ebbef3494b54ce87b324c348f",
+  "tolerance_commit": "1490238eb35e4b4dfce115c428b7d5907eadf58a",
+  "external_archive_sha256": "da3bd40dcd01ebe22a282287dc87def85d3540a368ab425130fabbc1767e9b38",
+  "external_archive_size_bytes": 37766,
+  "external_archive_filename": "pickcell_phase_b.zip",
+  "raw_held_measurement_sha256": "4562559ce13bb8ed51ba9ff9e21baeed5d77d665ec788aa953b0b162fe9a3a22",
+  "external_simulator": {
+    "name": "OmniSim",
+    "version": "8.3.0",
+    "commit": "cdfb678ca4f687eb56742af3509083e02ee149e6",
+    "physics_runtime": "Newton 1.5.0 with MuJoCo 3.11.0 on the deterministic CPU mj_step path",
+    "integrator": "MuJoCo Euler, semi-implicit",
+    "timestep_s": 0.001000000,
+    "substeps": 1,
+    "provenance": "declared in phase A. The external party states that the configuration was unchanged for phase B and that the run was not repeated after the tolerance was frozen; that is their statement, not something this repository can verify from the evidence"
+  },
+  "phase_a_continuity": {
+    "verified": true,
+    "reproducible_offline_from_this_repository": true,
+    "evidence_file": "phase-a-timing.json",
+    "evidence_sha256": "bbde701d3a02cda4b9a43233c90488e8ef8be237e69352ca591c451b8486b9e4",
+    "evidence_provenance": "the original phase A timing file exactly as received before phase B existed, taken byte for byte from pickcell_phase_a.zip. It was not regenerated or reserialised, and its digest was recomputed from those bytes",
+    "phase_a_archive_sha256": "1a32b40bee44d1cc40430f76109cbff871c525a54912fac6a38fff63eddd7741",
+    "phase_a_archive_size_bytes": 28092,
+    "phase_a_archive_filename": "pickcell_phase_a.zip",
+    "method": "the 25 phase B trials are compared field by field against the 25 phase A timing rows",
+    "comparison_semantics": "type-sensitive comparison of parsed values. Integer and floating-point types must remain the same, and floating-point values are compared using their canonical Python representation, so different parsed binary64 values are rejected and cases such as -0.0 versus 0.0 remain distinguishable. This is a semantic value-continuity check, not a claim that the numeric tokens have byte-identical textual spelling: two decimal spellings that parse to the same binary64 compare equal here",
+    "byte_level_preservation_established_separately_by": "the pinned SHA-256 digests of the received evidence files and the .gitattributes -text rules that stop git normalising them",
+    "fields_compared_per_trial": 13,
+    "total_comparisons": 325,
+    "result": "every phase A timing field is identical in phase B. Phase B adds only the eight fields that were withheld and alters none of the timing that was already public",
+    "run_by": "tools/verify_external_phase_b.py, on every CI run, from committed evidence alone",
+    "what_this_proves": "that the phase B evidence preserves the phase A-disclosed timing metadata exactly under the verifier's comparison semantics. It would detect a rerun or replacement only if that operation changed one of those committed fields",
+    "what_this_does_not_prove": "that no rerun occurred. Identical timing metadata alone cannot distinguish a preserved run from a deterministic rerun under identical conditions. The collaborator's no-rerun statement therefore remains provenance supplied by the external party, while the field-by-field comparison independently establishes continuity of the disclosed metadata",
+    "why_it_matters": "phase A was published while every measured distance was still withheld, so its timing was on the record before the results were. Committing the phase A file is what makes the comparison repeatable by a third party rather than an assertion about something done once on a maintainer's machine",
+    "withheld_fields_now_disclosed": [
+      "t_stop_tick", "reaction_time_T_s", "hazard_position_m", "stop_position_m",
+      "stopping_distance_m", "clearance_m", "crossed_plane_without_tolerance", "stop_velocity_mps"
+    ]
+  },
+  "trial_count": 25,
+  "trial_identities": "the exact Cartesian product of the frozen polling intervals 10, 25, 50, 100 and 200 ms with phase indices 1 to 5. No duplicates, none missing, none added",
+  "gate_1_pass": true,
+  "gate_1_note": "semantic agreement was already establishable from the phase A world file and controller and is unchanged by phase B: one translational degree of freedom along +x, the frozen initial state, the frozen segment durations and jerks, no gravity along the travel axis, no contact, a non-interacting hazard plane, and velocity held constant through the reaction interval",
+  "gate_2_pass_count": 25,
+  "gate_2_fail_count": 0,
+  "gate_2_overall_pass": true,
+  "gate_2_rule": "abs(stopping_distance_m - (2.0 * T + 0.450)) <= delta_m, per trial, evaluated at that trial's own T",
+  "delta_m": 0.003000074536,
+  "signed_residual_min_m": -0.0010006942749023473,
+  "signed_residual_max_m": -0.00099917602539068,
+  "signed_residual_mean_m": -0.0010000334036350412,
+  "max_absolute_residual_m": 0.0010006942749023473,
+  "diagnostic_expectation_m": -0.001,
+  "diagnostic_analysis": {
+    "status": "descriptive only. Gate 2 remains the frozen absolute-residual rule and was not tightened because the results came in well inside it",
+    "mean_minus_expectation_m": -3.340363504116678e-08,
+    "max_departure_from_expectation_m": 8.239746093199538e-07,
+    "fraction_of_delta_m_consumed_by_worst_trial": 0.33355647,
+    "percent_of_delta_m_consumed_by_worst_trial": 33.355647,
+    "headroom_m": 0.001999380261098,
+    "headroom_factor": 2.997993,
+    "residual_sign": "negative in all 25 trials, as predicted before disclosure. The simulated stop travels about 1 mm less than the continuous prediction",
+    "scatter_consistent_with_float32_quantization": "the observed scatter is fully consistent with float32 position quantization. All 50 stored position values are exactly representable as float32 values, and every departure from the pre-registered -1 mm diagnostic expectation is smaller than the float32 spacing at the corresponding absolute coordinate. No larger unexplained deviation is evident",
+    "why_the_spacing_grows": "the axis is not reset between trials, so the absolute coordinate grows to about 15.6 m by the end of the ladder and the float32 spacing there is about 9.5e-7 m, against a worst observed departure of 8.2e-7 m",
+    "limits_of_that_analysis": "this establishes consistency, not exclusivity. It does not rule out other sub-ULP contributions to the scatter; it establishes that nothing larger than float32 position quantization needs to be invoked to account for what was observed"
+  },
+  "hazard_classification": {
+    "classified_quantity": "stopping_distance_m, the distance travelled from t_hazard_assertion to rest",
+    "not_classified_on": "stop_position_m, which is an absolute world coordinate on an axis that is not reset between trials and reaches about 15.6 m",
+    "clear_below_m": 0.696999925464,
+    "crossed_above_m": 0.703000074536
+  },
+  "hazard_counts": {
+    "CLEAR": 23,
+    "INDETERMINATE": 0,
+    "CROSSED": 2
+  },
+  "crossed_trials": [
+    {
+      "poll_interval_ms": 200,
+      "phase_index": 2,
+      "reaction_time_T_s": 0.152,
+      "stopping_distance_m": 0.7529993057250977,
+      "clearance_m": -0.0529993057250977
+    },
+    {
+      "poll_interval_ms": 200,
+      "phase_index": 5,
+      "reaction_time_T_s": 0.181,
+      "stopping_distance_m": 0.8110008239746094,
+      "clearance_m": -0.11100082397460942
+    }
+  ],
+  "crossing_sanity_check": {
+    "status": "sanity check only. The frozen classification is on stopping distance and was not replaced by a reaction-time gate",
+    "analytical_no_tolerance_boundary_s": 0.125,
+    "tolerance_aware_boundary_s": 0.126500037,
+    "derivation": "(0.703000074536 - 0.450) / 2.0",
+    "observation": "both CROSSED trials sit well beyond that boundary at T = 0.152 s and T = 0.181 s, and every CLEAR trial sits below it, the nearest being the 200 ms phase 4 trial at T = 0.105 s. No trial lands near the band, which is why no trial is INDETERMINATE"
+  },
+  "stop_semantics_check": {
+    "declared_threshold_mps": 0.0001,
+    "max_observed_final_speed_mps": 3.725134e-10,
+    "result": "every trial came to rest far inside the declared threshold",
+    "braking_duration_ticks": 450,
+    "braking_duration_check": "in all 25 trials the stop tick is exactly 450 ticks after the profile start tick, matching the frozen 0.450 s braking profile at the 1 ms timestep"
+  },
+  "timing_check": {
+    "T_definition": "T = t_profile_start_tick - t_hazard_assertion_tick, times the 1 ms timestep",
+    "matches_disclosed_reaction_time": true,
+    "observation_precedes_or_equals_profile_start": true,
+    "observation_and_profile_start_share_a_tick": "25 of 25, as phase A described",
+    "T_within_one_polling_interval": true
+  },
+  "velocity_trace_available": false,
+  "velocity_trace_note": "the external run recorded a final stop velocity per trial but captured no time-series velocity trace, and none was reconstructed afterwards. This makes the optional diagnostic trace comparison unavailable. It is missing diagnostic evidence, not a failure of gate 1 or gate 2, neither of which ever depended on it",
+  "scope": {
+    "what_this_establishes": "that an independent simulator, given the same reaction time and the same commanded braking law, produces a stopping distance consistent with this repository's analytical prediction to within a tolerance frozen before the numbers were seen",
+    "what_this_does_not_establish": [
+      "this repository's Linux timing behaviour",
+      "HTTP communication latency",
+      "shared-memory latency",
+      "this repository's own measured reaction times, which a simulated polling model does not reproduce or confirm",
+      "industrial safety compliance",
+      "ISO certification",
+      "functional-safety certification"
+    ],
+    "primary_result": "stopping distance. Clearance and crossing are arithmetic against the frozen plane, not separate independent findings"
+  },
+  "verifier": {
+    "path": "tools/verify_external_phase_b.py",
+    "version": "1.0.0",
+    "dependencies": "Python standard library only",
+    "runs_the_simulator": false,
+    "note": "recomputes every derived quantity from the raw held measurement and the frozen artifacts, checks phase A to phase B continuity from the committed phase A timing file, then fails if this summary, the compact table, the pinned digests or the manifests disagree"
+  },
+  "external_archive_contents": {
+    "note": "the full inventory of the archive as received, so a reader can verify the original even though only two of its files are committed here. The frozen_repository_package entries are the collaborator's copies of files already in this repository and are byte-identical to them",
+    "retention_rationale": {
+      "zip_not_committed": "the archive itself is not committed. Every file it contains is listed below with its size and SHA-256, so the original remains verifiable by anyone who obtains it",
+      "canonical_evidence": "phase-b-raw-held.json is the canonical raw measurement evidence. Every derived quantity in this result is recomputed from it, and nothing else in the archive can stand in for it",
+      "csv_is_a_cross_format_check": "phase-b-trials.csv is semantically derivable from the raw trials, so retaining it is not strictly necessary to reproduce the result. Its original bytes are kept because it is an independently received serialisation of the same trials, which lets the verifier check the two representations against each other as well as against recomputation. The raw JSON and the CSV therefore encode overlapping trial information by design",
+      "omitted_as_derivable": "the collaborator's classified table, report and summary are values the verifier recomputes from the raw measurement, and the frozen_repository_package files are copies of artifacts already committed here. Those are inventoried by digest rather than duplicated in full"
+    },
+    "committed_in_this_repository": [
+      { "archive_path": "phase_b_raw_held_unchanged.json", "committed_as": "phase-b-raw-held.json", "size_bytes": 22826, "sha256": "4562559ce13bb8ed51ba9ff9e21baeed5d77d665ec788aa953b0b162fe9a3a22", "role": "canonical raw measurement evidence" },
+      { "archive_path": "phase_b_trials.csv", "committed_as": "phase-b-trials.csv", "size_bytes": 6006, "sha256": "f7d56ebaa17ce2e24615c441f22eb9a1143d9cb2b1a55b28aecbc998b45dfe3c", "role": "independently received serialisation of the same trials, retained as a cross-format consistency check" }
+    ],
+    "recorded_but_not_committed": [
+      { "archive_path": "phase_b_classified.json", "size_bytes": 34453, "sha256": "ac05020d76cbb5d5d34d2fc851af742c94c8e079b31f620c31ef910a73308a20", "why": "the collaborator's derived classification. Every field in it is recomputed by the verifier from the raw measurement, so committing it would duplicate derivable values in the largest file in the archive" },
+      { "archive_path": "REPORT.md", "size_bytes": 1405, "sha256": "41978ca6b36e8b2620a76588ecf3fdd34064441177476a0da57c8370dee571e3", "why": "the collaborator's prose report. Its claims were checked against recomputation and agreed" },
+      { "archive_path": "summary.json", "size_bytes": 721, "sha256": "87664daa4aabd170123eb0a1b55f99080c1e640545d12f9df5bbba454a294639", "why": "the collaborator's summary statistics, all of which were recomputed here rather than copied" },
+      { "archive_path": "manifest_verification.json", "size_bytes": 1736, "sha256": "17e55f6bf0c3a308214ff9e01addd0bdea23da35376ca287b95f22c3e3f4dfa6", "why": "the collaborator's record of verifying our manifest. Independently reverified here" },
+      { "archive_path": "frozen_repository_package/MANIFEST.sha256", "size_bytes": 425, "sha256": "70570de3f07049fe0753d10358746c34c4e996f7696665c5ad2a70e2cabe79d7", "why": "byte-identical to docs/external-validation/MANIFEST.sha256 in this repository" },
+      { "archive_path": "frozen_repository_package/README.md", "size_bytes": 17440, "sha256": "8adc751d43eb93f12cb2116b1dbb900bb7bdd26ed6b8a435516c0ee10da19ace", "why": "byte-identical to the pre-registered artifact already committed here" },
+      { "archive_path": "frozen_repository_package/scenario-v1.json", "size_bytes": 10725, "sha256": "61954a2b0f8d6195421e49f95f676e447e662a793faa540ccbc9c780280e6bb9", "why": "byte-identical to the pre-registered artifact already committed here" },
+      { "archive_path": "frozen_repository_package/prediction-v1.json", "size_bytes": 9002, "sha256": "f767a0d65c7f2ffa8562bb60a3ff2858dd9fe1afb61f4eba573f4fd931001a7a", "why": "byte-identical to the pre-registered artifact already committed here" },
+      { "archive_path": "frozen_repository_package/braking-reference-trace-v1.csv", "size_bytes": 22021, "sha256": "167b45ee8cd8954fee0695acf3865797d50a6efd7cb25ca0db19ac1a699321ab", "why": "byte-identical to the pre-registered artifact already committed here" },
+      { "archive_path": "frozen_repository_package/tolerance-v1.json", "size_bytes": 14885, "sha256": "8bc831503dbeb2457e2d0c7acb507d128ee91dbff46162e2b1358d203e9fea1b", "why": "byte-identical to the tolerance artifact already committed here" }
+    ]
+  },
+  "frozen_artifacts_unchanged": {
+    "README.md": "8adc751d43eb93f12cb2116b1dbb900bb7bdd26ed6b8a435516c0ee10da19ace",
+    "scenario-v1.json": "61954a2b0f8d6195421e49f95f676e447e662a793faa540ccbc9c780280e6bb9",
+    "prediction-v1.json": "f767a0d65c7f2ffa8562bb60a3ff2858dd9fe1afb61f4eba573f4fd931001a7a",
+    "braking-reference-trace-v1.csv": "167b45ee8cd8954fee0695acf3865797d50a6efd7cb25ca0db19ac1a699321ab",
+    "tolerance-v1.json": "8bc831503dbeb2457e2d0c7acb507d128ee91dbff46162e2b1358d203e9fea1b"
+  }
+}

@@ -1,2 +1,10 @@
 # LF everywhere: a CRLF makes a shell script shebang unparseable.
 * text=auto eol=lf
+
+# Except external evidence, which is byte-exact or it is not evidence. These
+# files arrived with CRLF line endings and their SHA-256 digests were published
+# over those exact bytes. Normalising them to LF would silently change the
+# digests the result rests on, so git is told to leave them alone.
+docs/external-validation/results-v1/phase-a-timing.json -text
+docs/external-validation/results-v1/phase-b-raw-held.json -text
+docs/external-validation/results-v1/phase-b-trials.csv -text
