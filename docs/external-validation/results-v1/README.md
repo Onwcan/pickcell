@@ -119,20 +119,25 @@ what survives is half a timestep of the total velocity change: −1 mm exactly.
 Observed: every one of the 25 residuals is negative, the mean is
 **−0.001000033 m**, and the largest departure from −1 mm is **0.82 µm**.
 
-The observed scatter is fully consistent with float32 position quantization. All
-50 stored position values are exactly representable as float32 values, and every
-departure from the pre-registered −1 mm diagnostic expectation is smaller than
-the float32 spacing at the corresponding absolute coordinate. No larger
-unexplained deviation is evident.
+The committed measurements independently show that the observed scatter is
+bounded at the scale expected from float32 representation: all 50 stored
+positions — and all 25 final stop velocities — are exactly representable in
+single precision, and every departure from the −1 mm diagnostic expectation is
+below the float32 spacing at the corresponding absolute coordinate. The axis is
+never reset between trials, so that coordinate climbs to about 15.6 m by the end
+of the ladder, where the spacing is about 9.5 × 10⁻⁷ m — against a worst
+observed departure of 8.2 × 10⁻⁷ m.
 
-The axis is never reset between trials, so the absolute coordinate climbs to
-about 15.6 m by the end of the ladder, where the float32 spacing is about
-9.5 × 10⁻⁷ m — against a worst observed departure of 8.2 × 10⁻⁷ m. That
-establishes consistency rather than exclusivity: it does not rule out other
-sub-ULP contributions, only that nothing larger than float32 position
-quantization needs to be invoked to account for what was observed. It is also
-one reason the classification is done on **stopping distance** rather than on
-the absolute coordinate.
+OmniLink additionally states that the simulator state is carried in single
+precision before it reaches the controller, which makes float32 quantization an
+operative mechanism in the disclosed run rather than merely a compatible story.
+Keep the two apart: **the implementation-mechanism statement is external
+simulator provenance**, while the representability and ULP comparisons above are
+independently checkable from the committed evidence and were rechecked here.
+
+Either way, it is one reason the classification is done on **stopping distance**
+rather than on the absolute coordinate, whose representation step grows as the
+ladder runs.
 
 The gate was **not** tightened to match. `delta_m` is what it was on 1490238e.
 
@@ -170,7 +175,41 @@ missing diagnostic evidence, not a failed gate: gate 1 is semantic and gate 2 is
 about distance, and neither ever depended on a trace. Had a discrepancy appeared,
 the trace would have helped localise it — there is no discrepancy to localise.
 
-## What is in here, and what is not
+## The run is pinned to the build Phase A disclosed
+
+OmniLink reports that the same frozen world and controller **no longer complete
+the ladder on their current build**. The axis does not reach the 2.0 m/s initial
+condition inside the controller's spin-up allowance, so the run aborts on that
+pre-condition rather than emitting a different set of stopping distances. They
+report the behaviour as repeatable.
+
+This is **external provenance**: their account of their build, not something this
+repository reproduced or can check. What follows from it is worth stating
+carefully.
+
+- The published Phase B evidence is **unaffected**. It is immutable, committed
+  byte-for-byte, and every derived quantity here recomputes from those bytes
+  with no simulator involved.
+- Reproduction of the published **simulator execution** is established for the
+  build and environment disclosed in Phase A — OmniSim 8.3.0 at `cdfb678c`,
+  Newton 1.5.0, MuJoCo 3.11.0 on the deterministic CPU `mj_step` path. OmniLink
+  reports that their current build is not a drop-in reproduction target because
+  it aborts at the initial-condition pre-condition before emitting
+  stopping-distance results.
+- That does **not** establish that no other build could reproduce the run. It
+  establishes that the published result is pinned to, and should be interpreted
+  against, the Phase A-disclosed simulator and build provenance.
+- The reported failure happens at the **initial-condition pre-condition**,
+  before any new stopping distance is produced. It is not a different result; it
+  is the absence of one.
+- It does **not** modify, weaken or invalidate the frozen result, and nothing
+  here was reclassified because of it.
+
+If anything, it is the argument for why the pre-registration pinned simulator
+and build provenance in the first place. A result whose numbers are reproducible
+only from committed bytes, and whose execution is pinned to a named build, keeps
+its meaning when the upstream toolchain moves; one that named neither would now
+be unverifiable in both directions at once.
 
 | file | what it is |
 |---|---|
@@ -209,11 +248,21 @@ them on commit and silently break the digests this result rests on.
 
 ## Checking it yourself
 
+From the repository root:
+
 ```sh
-sha256sum -c docs/external-validation/MANIFEST.sha256
-sha256sum -c docs/external-validation/results-v1/MANIFEST.sha256
+(cd docs/external-validation && sha256sum -c MANIFEST.sha256)
+(cd docs/external-validation/results-v1 && sha256sum -c MANIFEST.sha256)
 python3 tools/verify_external_phase_b.py
 ```
+
+The subshells are not decoration. Both manifests list bare filenames, which
+`sha256sum -c` resolves against the working directory rather than against the
+manifest's own location — so passing a path to the manifest without changing
+directory first reports four of its five entries unreadable and compares the
+repository's root `README.md` against the digest of a different `README.md`. An
+earlier revision of this page printed exactly that, which is how the error got
+here; CI always ran the working form.
 
 The verifier needs no build, no network and no simulator. It reads the committed
 evidence and the frozen artifacts, checks Phase A → Phase B continuity,

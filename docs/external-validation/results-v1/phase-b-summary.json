@@ -78,9 +78,21 @@
     "headroom_m": 0.001999380261098,
     "headroom_factor": 2.997993,
     "residual_sign": "negative in all 25 trials, as predicted before disclosure. The simulated stop travels about 1 mm less than the continuous prediction",
-    "scatter_consistent_with_float32_quantization": "the observed scatter is fully consistent with float32 position quantization. All 50 stored position values are exactly representable as float32 values, and every departure from the pre-registered -1 mm diagnostic expectation is smaller than the float32 spacing at the corresponding absolute coordinate. No larger unexplained deviation is evident",
-    "why_the_spacing_grows": "the axis is not reset between trials, so the absolute coordinate grows to about 15.6 m by the end of the ladder and the float32 spacing there is about 9.5e-7 m, against a worst observed departure of 8.2e-7 m",
-    "limits_of_that_analysis": "this establishes consistency, not exclusivity. It does not rule out other sub-ULP contributions to the scatter; it establishes that nothing larger than float32 position quantization needs to be invoked to account for what was observed"
+    "scatter_bounded_at_the_float32_scale": {
+      "provenance": "INDEPENDENTLY CHECKABLE from the committed evidence, and rechecked from it",
+      "statement": "the committed measurements show that the observed scatter is bounded at the scale expected from float32 representation: all 50 stored position values and all 25 final stop velocities are exactly representable in single precision, and every departure from the pre-registered -1 mm diagnostic expectation is below the float32 spacing at the corresponding absolute coordinate",
+      "stored_positions_exactly_representable_in_float32": 50,
+      "stop_velocities_exactly_representable_in_float32": 25,
+      "worst_departure_from_expectation_m": 8.239746093199538e-07,
+      "absolute_coordinate_at_worst_departure_m": 15.600000381469727,
+      "float32_spacing_at_that_coordinate_m": 9.5367431640625e-07,
+      "why_the_spacing_grows": "the axis is not reset between trials, so the absolute coordinate grows across the ladder and its representation step grows with it. That is also one reason the classification is on stopping distance rather than on the absolute coordinate"
+    },
+    "float32_mechanism_statement": {
+      "provenance": "REPORTED_BY_SIMULATOR. External simulator provenance supplied by OmniLink, not derivable from the committed evidence",
+      "statement": "OmniLink states that the simulator state is carried in single precision before it reaches the controller, which makes float32 quantization an operative mechanism in the disclosed run rather than only a compatible explanation",
+      "boundary": "the representability and ULP comparisons above stand on the committed evidence alone. This mechanism statement does not, and is recorded as the external party's account"
+    }
   },
   "hazard_classification": {
     "classified_quantity": "stopping_distance_m, the distance travelled from t_hazard_assertion to rest",
@@ -129,6 +141,16 @@
     "observation_precedes_or_equals_profile_start": true,
     "observation_and_profile_start_share_a_tick": "25 of 25, as phase A described",
     "T_within_one_polling_interval": true
+  },
+  "simulator_build_reproduction_limit": {
+    "provenance": "REPORTED_BY_SIMULATOR. OmniLink's account of their current build, not something this repository reproduced or can check",
+    "reported": "the same frozen world and controller no longer complete the ladder on OmniLink's current build. The axis does not reach the 2.0 m/s initial condition inside the controller's spin-up allowance, so the run aborts on that pre-condition rather than emitting a different set of stopping distances. OmniLink reports the behaviour as repeatable",
+    "fails_before_any_new_output": "the reported failure occurs at the initial-condition pre-condition, before a new stopping distance is produced. It is the absence of a result, not a different result",
+    "committed_evidence_unaffected": "the published phase B evidence is immutable and every derived quantity here recomputes from those committed bytes with no simulator involved. Nothing in this result depends on re-executing the simulation",
+    "reproduction_of_the_simulator_execution": "reproduction of the published simulator execution is established for the build and environment disclosed in phase A -- OmniSim 8.3.0 at cdfb678ca4f687eb56742af3509083e02ee149e6, Newton 1.5.0, MuJoCo 3.11.0 on the deterministic CPU mj_step path. OmniLink reports that their current build is not a drop-in reproduction target because it aborts at the initial-condition precondition before emitting stopping-distance results",
+    "what_that_does_not_establish": "that no other build could reproduce the run. It establishes that the published result is pinned to, and should be interpreted against, the phase A-disclosed simulator and build provenance",
+    "does_not_invalidate_the_result": "this changes no measurement, no residual, no gate outcome, no tolerance and no classification. Nothing was reclassified because of it",
+    "why_it_matters": "it is the argument for pinning simulator and build provenance in the pre-registration. A result whose numbers recompute from committed bytes, and whose execution is pinned to a named build, keeps its meaning when the upstream toolchain moves"
   },
   "velocity_trace_available": false,
   "velocity_trace_note": "the external run recorded a final stop velocity per trial but captured no time-series velocity trace, and none was reconstructed afterwards. This makes the optional diagnostic trace comparison unavailable. It is missing diagnostic evidence, not a failure of gate 1 or gate 2, neither of which ever depended on it",
